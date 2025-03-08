@@ -31,28 +31,29 @@
     <div class="container mt-5 mb-3">
             <form action="" method="post">
                 <div class="row mb-3">
-                    <div class="col-sm-4"></div>
-                    <div class="col-sm-4 text-center">
+                    <div class="col-sm-3"></div>
+                    <div class="col-sm-6 text-center">  <!-- Changed from col-sm-4 to col-sm-6 -->
                         <label for="">Username</label>
                         <input type="text" name="username">
                     </div>
-                    <div class="col-sm-4"></div> 
+                    <div class="col-sm-3"></div> 
                 </div>
+
                 <div class="row mb-3">
-                    <div class="col-sm-4"></div>
-                    <div class="col-sm-4 text-center">
+                    <div class="col-sm-3"></div>
+                    <div class="col-sm-6 text-center">  <!-- Changed from col-sm-4 to col-sm-6 -->
                         <label for="">Password</label>
                         <input type="password" name="password">
                     </div>
-                    <div class="col-sm-4"></div>
+                    <div class="col-sm-3"></div>
                 </div>
+
                 <div class="row mt-3">
-                    <div class="col-sm-4"></div>
-                    <div class="col-sm-4">
-                    <button type="submit" class="btn btn-primary">Login</button>
-                    <!-- <a href="signup.php">Signup</a> -->
+                    <div class="col-sm-3"></div>
+                    <div class="col-sm-6">  <!-- Changed from col-sm-4 to col-sm-6 -->
+                        <button type="submit" class="btn btn-primary">Login</button>
                     </div>
-                    <div class="col-sm-4"></div>
+                    <div class="col-sm-3"></div>
                 </div>
             </form>
         </div>
