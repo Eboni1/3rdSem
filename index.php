@@ -7,11 +7,12 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <link rel="stylesheet" href="style.css">
     <title>Login</title>
 </head>
 <body>
-    <div class="row">
-        <!-- This is test for github connection -->
+    <!-- <div class="row">
+        This is test for github connection
         <h1>TEST</h1>
         <p>Lorem ipsum dolor sit amet consectetur, adipisicing elit. Nobis, nam. Doloribus rem tempora laborum in voluptate atque praesentium quas reprehenderit expedita nulla at suscipit, consequatur dolore vitae asperiores harum blanditiis!
         Praesentium recusandae libero in deleniti? Hic quisquam eius voluptate amet libero natus iusto laboriosam suscipit quia sunt quam modi velit molestias officia deleniti esse, atque debitis et accusantium veniam voluptatum?
@@ -26,6 +27,34 @@
     
         Unsa man ni!
     </p>
-    </div>
+    </div> -->
+    <div class="container mt-5 mb-3">
+            <form action="" method="post">
+                <div class="row mb-3">
+                    <div class="col-sm-4"></div>
+                    <div class="col-sm-4 text-center">
+                        <label for="">Username</label>
+                        <input type="text" name="username">
+                    </div>
+                    <div class="col-sm-4"></div> 
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-4"></div>
+                    <div class="col-sm-4 text-center">
+                        <label for="">Password</label>
+                        <input type="password" name="password">
+                    </div>
+                    <div class="col-sm-4"></div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-sm-4"></div>
+                    <div class="col-sm-4">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                    <!-- <a href="signup.php">Signup</a> -->
+                    </div>
+                    <div class="col-sm-4"></div>
+                </div>
+            </form>
+        </div>
 </body>
 </html>
