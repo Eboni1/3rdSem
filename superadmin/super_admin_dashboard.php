@@ -1,7 +1,8 @@
 <?php
 session_start();
+include "../connect.php"; // Include database connection
 if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
-    header("Location: index.php"); // Redirect if not Super Admin
+    header("Location: ../index.php"); // Redirect if not Super Admin
     exit;
 }
 ?>
@@ -14,148 +15,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
     <title>Inventory Management - Super Admin</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        :root {
-            --sidebar-width: 250px;
-            --topbar-height: 60px;
-            --primary-color: #3498db;
-            --secondary-color: #2c3e50;
-        }
-        
-        body {
-            background-color: #f8f9fa;
-            overflow-x: hidden;
-        }
-        
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: var(--sidebar-width);
-            height: 100vh;
-            background-color: var(--secondary-color);
-            color: white;
-            transition: all 0.3s;
-            z-index: 1000;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        
-        .sidebar-header {
-            padding: 20px;
-            background-color: rgba(0,0,0,0.1);
-        }
-        
-        .sidebar-menu {
-            padding: 0;
-            list-style: none;
-        }
-        
-        .sidebar-menu li {
-            padding: 10px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-        
-        .sidebar-menu li a {
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-        }
-        
-        .sidebar-menu li a i {
-            margin-right: 10px;
-            font-size: 1.2rem;
-        }
-        
-        .sidebar-menu li:hover {
-            background-color: rgba(255,255,255,0.1);
-        }
-        
-        .sidebar-menu li.active {
-            background-color: var(--primary-color);
-        }
-        
-        .main-content {
-            margin-left: var(--sidebar-width);
-            padding: 20px;
-            transition: all 0.3s;
-        }
-        
-        .topbar {
-            height: var(--topbar-height);
-            background-color: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-            position: sticky;
-            top: 0;
-            z-index: 900;
-        }
-        
-        .toggle-sidebar {
-            display: none;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-        
-        .dashboard-card {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-            transition: transform 0.3s;
-        }
-        
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .card-icon {
-            font-size: 2rem;
-            margin-bottom: 15px;
-            color: var(--primary-color);
-        }
-        
-        .card-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-        
-        .card-label {
-            color: #6c757d;
-            font-size: 0.9rem;
-        }
-        
-        .user-form {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 25px;
-        }
-        
-        @media (max-width: 992px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            
-            .main-content {
-                margin-left: 0;
-            }
-            
-            .toggle-sidebar {
-                display: block;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Sidebar -->
@@ -170,7 +30,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
             <li><a href="#"><i class="bi bi-cart3"></i> Orders</a></li>
             <li><a href="#"><i class="bi bi-graph-up"></i> Reports</a></li>
             <li><a href="#"><i class="bi bi-gear"></i> Settings</a></li>
-            <li><a href="logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+            <li><a href="../logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
         </ul>
     </div>
 
@@ -194,7 +54,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
                         <li><a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                        <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                     </ul>
                 </div>
             </div>
