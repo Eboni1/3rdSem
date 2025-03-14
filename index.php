@@ -1,3 +1,55 @@
+<?php
+session_start();
+require_once "connect.php"; // Include database connection
+
+// Check if form is submitted
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $username = trim($_POST["username"]);
+    $password = trim($_POST["password"]);
+
+    if (empty($username) || empty($password)) {
+        echo "Please fill in both fields.";
+        exit;
+    }
+
+    // Prepare SQL statement to prevent SQL injection
+    $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    // Check if user exists
+    if ($result->num_rows == 1) {
+        $user = $result->fetch_assoc();
+
+        // Verify password
+        if (password_verify($password, $user["password"])) {
+            $_SESSION["user_id"] = $user["id"];
+            $_SESSION["username"] = $user["username"];
+            $_SESSION["role"] = $user["role"]; // Store user role
+
+            // Redirect based on role
+            if ($user["role"] === "super_admin") {
+                header("Location: super_admin_dashboard.php");
+            } elseif ($user["role"] === "admin") {
+                header("Location: admin_dashboard.php");
+            } else {
+                header("Location: user_dashboard.php");
+            }
+            exit;
+        } else {
+            echo "Invalid username or password.";
+        }
+    } else {
+        echo "Invalid username or password.";
+    }
+
+    $stmt->close();
+}
+
+$conn->close();
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,23 +63,7 @@
     <title>Login</title>
 </head>
 <body>
-    <!-- <div class="row">
-        This is test for github connection
-        <h1>TEST</h1>
-        <p>Lorem ipsum dolor sit amet consectetur, adipisicing elit. Nobis, nam. Doloribus rem tempora laborum in voluptate atque praesentium quas reprehenderit expedita nulla at suscipit, consequatur dolore vitae asperiores harum blanditiis!
-        Praesentium recusandae libero in deleniti? Hic quisquam eius voluptate amet libero natus iusto laboriosam suscipit quia sunt quam modi velit molestias officia deleniti esse, atque debitis et accusantium veniam voluptatum?
-        Eveniet excepturi unde sint iste debitis eum rem odio aut, totam doloribus impedit consequatur officia, vel repellendus mollitia nesciunt pariatur obcaecati maiores velit fugit. A sint laborum itaque ab recusandae.
-        Necessitatibus nulla ex mollitia saepe iusto rerum quidem excepturi vel, ea, dolores eveniet consequuntur ipsum pariatur! Dolore qui distinctio facere, dignissimos, laborum provident excepturi nulla molestiae ratione, delectus doloribus. Maiores.
-        Cupiditate accusamus, officiis ipsa ipsam, dignissimos odio amet omnis libero dolores et quas eum sit totam sed. Minima cupiditate aut nihil, nostrum numquam suscipit optio at, atque est ullam provident!
-        Minima ea dolorum asperiores repellendus ducimus eius? Mollitia aliquid magni quia odio esse veritatis ut officiis quae ad asperiores officia accusantium, tempore expedita facere magnam ullam accusamus est, excepturi suscipit?
-        Ea inventore reiciendis corporis eum ducimus, quo recusandae placeat adipisci fuga, doloremque assumenda eveniet alias veniam architecto nobis nam nisi mollitia error eos. Nemo vitae tenetur minima! Voluptatibus, distinctio tempora?
-        Eligendi in molestiae quo nam, iste dolor eius, qui cumque consequatur obcaecati maxime hic tempora voluptatum. Quia recusandae aspernatur excepturi voluptas dignissimos ipsa! Provident nulla quaerat dolor vero hic quibusdam?
-        Dignissimos, ratione perferendis modi dicta sint itaque porro doloribus cupiditate magnam? Rerum dolorem hic dolor laboriosam, recusandae facilis aliquam at odit placeat animi! Ipsum, soluta officiis accusantium fugiat ipsa ad?
-        Ipsa consequuntur odit ad voluptatum doloribus dolorem cumque blanditiis placeat nobis sed. Molestiae doloremque beatae praesentium debitis molestias accusamus esse repellendus tempore ut deleniti, tempora quaerat dolorem at dignissimos ratione!
     
-        Unsa man ni!
-    </p>
-    </div> -->
     <div class="container mt-5 mb-3">
             <form action="" method="post">
                 <div class="row mb-3">
