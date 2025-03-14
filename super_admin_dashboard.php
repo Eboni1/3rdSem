@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
-    header("Location: index.html"); // Redirect if not Super Admin
+    header("Location: index.php"); // Redirect if not Super Admin
     exit;
 }
 ?>
