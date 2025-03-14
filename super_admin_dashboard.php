@@ -16,7 +16,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
 </head>
 <body>
     <div class="container mt-5">
-        <h1>Welcome, Super Admin <?php echo htmlspecialchars($_SESSION["username"]); ?>!</h1>
+        <h1>Welcome, <?php echo htmlspecialchars($_SESSION["username"]); ?>!</h1>
         
         <h3 class="mt-4">Register a New User</h3>
         <form action="register_user.php" method="post">
