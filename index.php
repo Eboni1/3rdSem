@@ -30,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             // Redirect based on role
             if ($user["role"] === "super_admin") {
-                header("Location: super_admin_dashboard.php");
+                header("Location: superadmin/super_admin_dashboard.php");
             } elseif ($user["role"] === "admin") {
                 header("Location: admin_dashboard.php");
             } else {
@@ -55,38 +55,38 @@ $conn->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-        <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="style.css">
     <title>Login</title>
 </head>
 <body>
     
     <div class="container mt-5 mb-3">
-            <form action="" method="post">
+            <form action="" method="post" autocomplete="off">
                 <div class="row mb-3">
                     <div class="col-sm-3"></div>
-                    <div class="col-sm-6 text-center">  <!-- Changed from col-sm-4 to col-sm-6 -->
-                        <label for="">Username</label>
-                        <input type="text" name="username">
+                    <div class="col-sm-6 text-center">
+                        <label for="username">Username</label>
+                        <input type="text" name="username" id="username" autocomplete="off" placeholder="Enter your username">
                     </div>
                     <div class="col-sm-3"></div> 
                 </div>
 
                 <div class="row mb-3">
                     <div class="col-sm-3"></div>
-                    <div class="col-sm-6 text-center">  <!-- Changed from col-sm-4 to col-sm-6 -->
-                        <label for="">Password</label>
-                        <input type="password" name="password">
+                    <div class="col-sm-6 text-center">
+                        <label for="password">Password</label>
+                        <input type="password" name="password" id="password" autocomplete="new-password" placeholder="Enter your password">
                     </div>
                     <div class="col-sm-3"></div>
                 </div>
 
                 <div class="row mt-3">
                     <div class="col-sm-3"></div>
-                    <div class="col-sm-6">  <!-- Changed from col-sm-4 to col-sm-6 -->
+                    <div class="col-sm-6">
                         <button type="submit" class="btn btn-primary">Login</button>
                     </div>
                     <div class="col-sm-3"></div>
