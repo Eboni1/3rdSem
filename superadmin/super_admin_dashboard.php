@@ -5,6 +5,51 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
     header("Location: ../index.php"); // Redirect if not Super Admin
     exit;
 }
+
+// Get total users count
+$users_query = "SELECT COUNT(*) as total_users FROM users";
+$users_result = mysqli_query($conn, $users_query);
+$users_data = mysqli_fetch_assoc($users_result);
+$total_users = $users_data['total_users'];
+
+// Get inventory statistics
+$total_items_query = "SELECT COUNT(*) as total FROM assets";
+$total_items_result = mysqli_query($conn, $total_items_query);
+$total_items_data = mysqli_fetch_assoc($total_items_result);
+$total_items = $total_items_data['total'];
+
+// Get available items
+$available_query = "SELECT COUNT(*) as available FROM assets WHERE status = 'Available'";
+$available_result = mysqli_query($conn, $available_query);
+$available_data = mysqli_fetch_assoc($available_result);
+$available_items = $available_data['available'];
+
+// Get items in use
+$in_use_query = "SELECT COUNT(*) as in_use FROM assets WHERE status = 'In Use'";
+$in_use_result = mysqli_query($conn, $in_use_query);
+$in_use_data = mysqli_fetch_assoc($in_use_result);
+$in_use_items = $in_use_data['in_use'];
+
+// Get maintenance items
+$maintenance_query = "SELECT COUNT(*) as maintenance FROM assets WHERE status = 'Maintenance'";
+$maintenance_result = mysqli_query($conn, $maintenance_query);
+$maintenance_data = mysqli_fetch_assoc($maintenance_result);
+$maintenance_items = $maintenance_data['maintenance'];
+
+// Get recent users
+$recent_users_query = "SELECT id, username, role, status FROM users ORDER BY id DESC LIMIT 3";
+$recent_users_result = mysqli_query($conn, $recent_users_query);
+$recent_users = mysqli_fetch_all($recent_users_result, MYSQLI_ASSOC);
+
+// Get recent assets
+$recent_assets_query = "SELECT id, asset_name, category, status, date_acquired FROM assets ORDER BY id DESC LIMIT 5";
+$recent_assets_result = mysqli_query($conn, $recent_assets_query);
+$recent_assets = mysqli_fetch_all($recent_assets_result, MYSQLI_ASSOC);
+
+// Get category statistics
+$categories_query = "SELECT category, COUNT(*) as count FROM assets GROUP BY category ORDER BY count DESC LIMIT 5";
+$categories_result = mysqli_query($conn, $categories_query);
+$categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -16,6 +61,52 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="style.css">
+    <style>
+        .asset-status-available {
+            background-color: #d1e7dd;
+            color: #0f5132;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .asset-status-in-use {
+            background-color: #cff4fc;
+            color: #055160;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .asset-status-maintenance {
+            background-color: #fff3cd;
+            color: #664d03;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .asset-status-retired {
+            background-color: #f8d7da;
+            color: #842029;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        
+        .category-stat {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .category-stat:hover {
+            background-color: #e9ecef;
+        }
+    </style>
 </head>
 <body>
     <!-- Sidebar -->
@@ -26,7 +117,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
         <ul class="sidebar-menu">
             <li class="active"><a href="#"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
             <li><a href="user_management.php"><i class="bi bi-people"></i> User Management</a></li>
-            <li><a href="#"><i class="bi bi-box-seam"></i> Inventory</a></li>
+            <li><a href="inventory.php"><i class="bi bi-box-seam"></i> Inventory</a></li>
             <li><a href="#"><i class="bi bi-cart3"></i> Orders</a></li>
             <li><a href="#"><i class="bi bi-graph-up"></i> Reports</a></li>
             <li><a href="#"><i class="bi bi-gear"></i> Settings</a></li>
@@ -68,7 +159,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
                         <div class="card-icon">
                             <i class="bi bi-people"></i>
                         </div>
-                        <div class="card-value">24</div>
+                        <div class="card-value"><?php echo $total_users; ?></div>
                         <div class="card-label">TOTAL USERS</div>
                     </div>
                 </div>
@@ -77,31 +168,162 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
                         <div class="card-icon">
                             <i class="bi bi-box-seam"></i>
                         </div>
-                        <div class="card-value">1,254</div>
+                        <div class="card-value"><?php echo $total_items; ?></div>
                         <div class="card-label">INVENTORY ITEMS</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
                     <div class="dashboard-card text-center">
                         <div class="card-icon">
-                            <i class="bi bi-cart-check"></i>
+                            <i class="bi bi-check-circle"></i>
                         </div>
-                        <div class="card-value">156</div>
-                        <div class="card-label">ORDERS THIS MONTH</div>
+                        <div class="card-value"><?php echo $available_items; ?></div>
+                        <div class="card-label">AVAILABLE ITEMS</div>
                     </div>
                 </div>
                 <div class="col-md-3 col-sm-6">
                     <div class="dashboard-card text-center">
                         <div class="card-icon">
-                            <i class="bi bi-exclamation-triangle"></i>
+                            <i class="bi bi-tools"></i>
                         </div>
-                        <div class="card-value">12</div>
-                        <div class="card-label">LOW STOCK ALERTS</div>
+                        <div class="card-value"><?php echo $maintenance_items; ?></div>
+                        <div class="card-label">MAINTENANCE ITEMS</div>
                     </div>
                 </div>
             </div>
 
             <div class="row">
+                <div class="col-lg-8 mb-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Recent Inventory Items</h5>
+                            <a href="inventory.php" class="btn btn-sm btn-primary">View All</a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Asset Name</th>
+                                            <th>Category</th>
+                                            <th>Status</th>
+                                            <th>Date Acquired</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (empty($recent_assets)): ?>
+                                            <tr>
+                                                <td colspan="5" class="text-center">No assets found</td>
+                                            </tr>
+                                        <?php else: ?>
+                                            <?php foreach ($recent_assets as $asset): ?>
+                                                <tr>
+                                                    <td><?php echo $asset['id']; ?></td>
+                                                    <td><?php echo htmlspecialchars($asset['asset_name']); ?></td>
+                                                    <td><?php echo htmlspecialchars($asset['category']); ?></td>
+                                                    <td>
+                                                        <?php 
+                                                            $status_class = '';
+                                                            switch($asset['status']) {
+                                                                case 'Available':
+                                                                    $status_class = 'asset-status-available';
+                                                                    break;
+                                                                case 'In Use':
+                                                                    $status_class = 'asset-status-in-use';
+                                                                    break;
+                                                                case 'Maintenance':
+                                                                    $status_class = 'asset-status-maintenance';
+                                                                    break;
+                                                                case 'Retired':
+                                                                    $status_class = 'asset-status-retired';
+                                                                    break;
+                                                                default:
+                                                                    $status_class = '';
+                                                            }
+                                                            echo '<span class="'.$status_class.'">'.$asset['status'].'</span>';
+                                                        ?>
+                                                    </td>
+                                                    <td><?php echo date('M d, Y', strtotime($asset['date_acquired'])); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Inventory by Category</h5>
+                        </div>
+                        <div class="card-body">
+                            <?php if (empty($categories_stats)): ?>
+                                <p class="text-center">No categories found</p>
+                            <?php else: ?>
+                                <?php foreach ($categories_stats as $category): ?>
+                                    <div class="category-stat">
+                                        <span><?php echo htmlspecialchars($category['category']); ?></span>
+                                        <span class="badge bg-primary"><?php echo $category['count']; ?> items</span>
+                                    </div>
+                                <?php endforeach; ?>
+                                <div class="text-center mt-3">
+                                    <a href="inventory.php" class="btn btn-sm btn-outline-primary">Manage Categories</a>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Inventory Status</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>Available</span>
+                                    <span><?php echo $available_items; ?> items</span>
+                                </label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: <?php echo ($total_items > 0) ? ($available_items / $total_items * 100) : 0; ?>%" 
+                                         aria-valuenow="<?php echo $available_items; ?>" aria-valuemin="0" aria-valuemax="<?php echo $total_items; ?>"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>In Use</span>
+                                    <span><?php echo $in_use_items; ?> items</span>
+                                </label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-info" role="progressbar" 
+                                         style="width: <?php echo ($total_items > 0) ? ($in_use_items / $total_items * 100) : 0; ?>%" 
+                                         aria-valuenow="<?php echo $in_use_items; ?>" aria-valuemin="0" aria-valuemax="<?php echo $total_items; ?>"></div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label d-flex justify-content-between">
+                                    <span>Maintenance</span>
+                                    <span><?php echo $maintenance_items; ?> items</span>
+                                </label>
+                                <div class="progress">
+                                    <div class="progress-bar bg-warning" role="progressbar" 
+                                         style="width: <?php echo ($total_items > 0) ? ($maintenance_items / $total_items * 100) : 0; ?>%" 
+                                         aria-valuenow="<?php echo $maintenance_items; ?>" aria-valuemin="0" aria-valuemax="<?php echo $total_items; ?>"></div>
+                                </div>
+                            </div>
+                            <div class="text-center mt-4">
+                                <a href="inventory.php" class="btn btn-sm btn-primary">Manage Inventory</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-4">
                 <div class="col-lg-6 mb-4">
                     <div class="user-form">
                         <h4 class="mb-4"><i class="bi bi-person-plus me-2"></i>Register a New User</h4>
@@ -163,37 +385,35 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td>john_doe</td>
-                                        <td><span class="badge bg-primary">Admin</span></td>
-                                        <td><span class="badge bg-success">Active</span></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>jane_smith</td>
-                                        <td><span class="badge bg-info">User</span></td>
-                                        <td><span class="badge bg-success">Active</span></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>robert_johnson</td>
-                                        <td><span class="badge bg-info">User</span></td>
-                                        <td><span class="badge bg-warning">Inactive</span></td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                        </td>
-                                    </tr>
+                                    <?php if (empty($recent_users)): ?>
+                                        <tr>
+                                            <td colspan="4" class="text-center">No users found</td>
+                                        </tr>
+                                    <?php else: ?>
+                                        <?php foreach ($recent_users as $user): ?>
+                                            <tr>
+                                                <td><?php echo htmlspecialchars($user['username']); ?></td>
+                                                <td>
+                                                    <span class="badge <?php echo ($user['role'] == 'admin' || $user['role'] == 'super_admin') ? 'bg-primary' : 'bg-info'; ?>">
+                                                        <?php echo ucfirst(htmlspecialchars($user['role'])); ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <?php echo ($user['status'] == 'active') ? 'bg-success' : 'bg-warning'; ?>">
+                                                        <?php echo ucfirst(htmlspecialchars($user['status'] ?? 'active')); ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <a href="edit_user.php?id=<?php echo $user['id']; ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                                                    <a href="delete_user.php?id=<?php echo $user['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this user?')"><i class="bi bi-trash"></i></a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
-                        <a href="#" class="btn btn-outline-primary">View All Users</a>
+                        <a href="user_management.php" class="btn btn-outline-primary">View All Users</a>
                     </div>
                 </div>
             </div>
