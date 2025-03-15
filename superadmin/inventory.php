@@ -213,7 +213,7 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                 <li><a href="user_management.php"><i class="bi bi-people"></i> User Management</a></li>
                 <li class="active"><a href="inventory.php"><i class="bi bi-box-seam"></i> Inventory</a></li>
                 <li><a href="#"><i class="bi bi-cart3"></i> Orders</a></li>
-                <li><a href="#"><i class="bi bi-graph-up"></i> Reports</a></li>
+                <li><a href="reports.php"><i class="bi bi-graph-up"></i> Reports</a></li>
                 <li><a href="#"><i class="bi bi-gear"></i> Settings</a></li>
                 <li><a href="../logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
             </ul>
