@@ -156,6 +156,8 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
     <link rel="stylesheet" href="style.css">
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
     <style>
         .asset-status-available {
             background-color: #d1e7dd;
