@@ -12,16 +12,16 @@ $successMsg = $errorMsg = "";
 // Add new category
 if (isset($_POST['add_category'])) {
     $category_name = mysqli_real_escape_string($conn, $_POST['category_name']);
-    
+
     // Check if category already exists
     $check_query = "SELECT * FROM asset_categories WHERE category_name = '$category_name'";
     $check_result = mysqli_query($conn, $check_query);
-    
+
     if (mysqli_num_rows($check_result) > 0) {
         $errorMsg = "Category already exists!";
     } else {
         $query = "INSERT INTO asset_categories (category_name) VALUES ('$category_name')";
-        
+
         if (mysqli_query($conn, $query)) {
             $successMsg = "Category added successfully!";
         } else {
@@ -33,17 +33,17 @@ if (isset($_POST['add_category'])) {
 // Delete category
 if (isset($_GET['delete_category'])) {
     $category_id = mysqli_real_escape_string($conn, $_GET['delete_category']);
-    
+
     // Check if category is in use
     $check_query = "SELECT COUNT(*) as count FROM assets WHERE category = (SELECT category_name FROM asset_categories WHERE id = '$category_id')";
     $check_result = mysqli_query($conn, $check_query);
     $check_data = mysqli_fetch_assoc($check_result);
-    
+
     if ($check_data['count'] > 0) {
         $errorMsg = "Cannot delete category that is in use by assets!";
     } else {
         $query = "DELETE FROM asset_categories WHERE id = '$category_id'";
-        
+
         if (mysqli_query($conn, $query)) {
             $successMsg = "Category deleted successfully!";
         } else {
@@ -59,10 +59,14 @@ if (isset($_POST['add_asset'])) {
     $asset_status = mysqli_real_escape_string($conn, $_POST['asset_status']);
     $asset_description = mysqli_real_escape_string($conn, $_POST['asset_description']);
     $date_acquired = mysqli_real_escape_string($conn, $_POST['date_acquired']);
-    
-    $query = "INSERT INTO assets (asset_name, category, status, description, date_acquired) 
-              VALUES ('$asset_name', '$asset_category', '$asset_status', '$asset_description', '$date_acquired')";
-    
+    $asset_value = mysqli_real_escape_string($conn, $_POST['asset_value']);
+    $quantity = mysqli_real_escape_string($conn, $_POST['quantity']);
+    $unit = mysqli_real_escape_string($conn, $_POST['unit']);
+    $location = mysqli_real_escape_string($conn, $_POST['location']);
+
+    $query = "INSERT INTO assets (asset_name, category, status, description, date_acquired, asset_value, quantity, unit, location) 
+              VALUES ('$asset_name', '$asset_category', '$asset_status', '$asset_description', '$date_acquired', '$asset_value', '$quantity', '$unit', '$location')";
+
     if (mysqli_query($conn, $query)) {
         $successMsg = "Asset added successfully!";
     } else {
@@ -78,15 +82,23 @@ if (isset($_POST['update_asset'])) {
     $asset_status = mysqli_real_escape_string($conn, $_POST['asset_status']);
     $asset_description = mysqli_real_escape_string($conn, $_POST['asset_description']);
     $date_acquired = mysqli_real_escape_string($conn, $_POST['date_acquired']);
-    
+    $asset_value = mysqli_real_escape_string($conn, $_POST['asset_value']);
+    $quantity = mysqli_real_escape_string($conn, $_POST['quantity']);
+    $unit = mysqli_real_escape_string($conn, $_POST['unit']);
+    $location = mysqli_real_escape_string($conn, $_POST['location']);
+
     $query = "UPDATE assets SET 
               asset_name = '$asset_name', 
               category = '$asset_category', 
               status = '$asset_status', 
               description = '$asset_description', 
-              date_acquired = '$date_acquired' 
+              date_acquired = '$date_acquired',
+              asset_value = '$asset_value',
+              quantity = '$quantity',
+              unit = '$unit',
+              location = '$location'
               WHERE id = '$asset_id'";
-    
+
     if (mysqli_query($conn, $query)) {
         $successMsg = "Asset updated successfully!";
     } else {
@@ -97,9 +109,9 @@ if (isset($_POST['update_asset'])) {
 // Delete asset
 if (isset($_GET['delete_id'])) {
     $asset_id = mysqli_real_escape_string($conn, $_GET['delete_id']);
-    
+
     $query = "DELETE FROM assets WHERE id = '$asset_id'";
-    
+
     if (mysqli_query($conn, $query)) {
         $successMsg = "Asset deleted successfully!";
     } else {
@@ -126,14 +138,14 @@ if (!$categories_result) {
         PRIMARY KEY (`id`),
         UNIQUE KEY `category_name` (`category_name`)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-    
+
     mysqli_query($conn, $create_table_query);
-    
+
     // Import existing categories from assets table
     $import_query = "INSERT IGNORE INTO asset_categories (category_name) 
                     SELECT DISTINCT category FROM assets WHERE category != ''";
     mysqli_query($conn, $import_query);
-    
+
     // Fetch categories again
     $query = "SELECT * FROM asset_categories ORDER BY category_name";
     $categories_result = mysqli_query($conn, $query);
@@ -144,6 +156,7 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -166,7 +179,7 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
             border-radius: 4px;
             font-weight: 500;
         }
-        
+
         .asset-status-in-use {
             background-color: #cff4fc;
             color: #055160;
@@ -174,7 +187,7 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
             border-radius: 4px;
             font-weight: 500;
         }
-        
+
         .asset-status-maintenance {
             background-color: #fff3cd;
             color: #664d03;
@@ -182,7 +195,7 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
             border-radius: 4px;
             font-weight: 500;
         }
-        
+
         .asset-status-retired {
             background-color: #f8d7da;
             color: #842029;
@@ -190,17 +203,18 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
             border-radius: 4px;
             font-weight: 500;
         }
-        
+
         .nav-tabs .nav-link {
             color: #495057;
         }
-        
+
         .nav-tabs .nav-link.active {
             font-weight: bold;
             color: #0d6efd;
         }
     </style>
 </head>
+
 <body>
     <div class="wrapper">
         <!-- Sidebar -->
@@ -261,11 +275,11 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                         <div>
                                             <h6 class="card-title text-muted">Total Assets</h6>
                                             <h2 class="mb-0">
-                                                <?php 
-                                                    $query = "SELECT COUNT(*) as total FROM assets";
-                                                    $result = mysqli_query($conn, $query);
-                                                    $row = mysqli_fetch_assoc($result);
-                                                    echo $row['total'];
+                                                <?php
+                                                $query = "SELECT COUNT(*) as total FROM assets";
+                                                $result = mysqli_query($conn, $query);
+                                                $row = mysqli_fetch_assoc($result);
+                                                echo $row['total'];
                                                 ?>
                                             </h2>
                                         </div>
@@ -283,11 +297,11 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                         <div>
                                             <h6 class="card-title text-muted">Available</h6>
                                             <h2 class="mb-0">
-                                                <?php 
-                                                    $query = "SELECT COUNT(*) as available FROM assets WHERE status = 'Available'";
-                                                    $result = mysqli_query($conn, $query);
-                                                    $row = mysqli_fetch_assoc($result);
-                                                    echo $row['available'];
+                                                <?php
+                                                $query = "SELECT COUNT(*) as available FROM assets WHERE status = 'Available'";
+                                                $result = mysqli_query($conn, $query);
+                                                $row = mysqli_fetch_assoc($result);
+                                                echo $row['available'];
                                                 ?>
                                             </h2>
                                         </div>
@@ -305,11 +319,11 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                         <div>
                                             <h6 class="card-title text-muted">In Use</h6>
                                             <h2 class="mb-0">
-                                                <?php 
-                                                    $query = "SELECT COUNT(*) as in_use FROM assets WHERE status = 'In Use'";
-                                                    $result = mysqli_query($conn, $query);
-                                                    $row = mysqli_fetch_assoc($result);
-                                                    echo $row['in_use'];
+                                                <?php
+                                                $query = "SELECT COUNT(*) as in_use FROM assets WHERE status = 'In Use'";
+                                                $result = mysqli_query($conn, $query);
+                                                $row = mysqli_fetch_assoc($result);
+                                                echo $row['in_use'];
                                                 ?>
                                             </h2>
                                         </div>
@@ -327,11 +341,11 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                         <div>
                                             <h6 class="card-title text-muted">Maintenance</h6>
                                             <h2 class="mb-0">
-                                                <?php 
-                                                    $query = "SELECT COUNT(*) as maintenance FROM assets WHERE status = 'Maintenance'";
-                                                    $result = mysqli_query($conn, $query);
-                                                    $row = mysqli_fetch_assoc($result);
-                                                    echo $row['maintenance'];
+                                                <?php
+                                                $query = "SELECT COUNT(*) as maintenance FROM assets WHERE status = 'Maintenance'";
+                                                $result = mysqli_query($conn, $query);
+                                                $row = mysqli_fetch_assoc($result);
+                                                echo $row['maintenance'];
                                                 ?>
                                             </h2>
                                         </div>
@@ -357,6 +371,10 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                             <th>ID</th>
                                             <th>Asset Name</th>
                                             <th>Category</th>
+                                            <th>Quantity</th>
+                                            <th>Unit</th>
+                                            <th>Value</th>
+                                            <th>Location</th>
                                             <th>Status</th>
                                             <th>Date Acquired</th>
                                             <th>Description</th>
@@ -369,44 +387,52 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                                 <td><?php echo $asset['id']; ?></td>
                                                 <td><?php echo $asset['asset_name']; ?></td>
                                                 <td><?php echo $asset['category']; ?></td>
+                                                <td><?php echo isset($asset['quantity']) ? $asset['quantity'] : ''; ?></td>
+                                                <td><?php echo isset($asset['unit']) ? $asset['unit'] : ''; ?></td>
+                                                <td><?php echo isset($asset['asset_value']) ? '₱' . number_format($asset['asset_value'], 2) : ''; ?></td>
+                                                <td><?php echo isset($asset['location']) ? $asset['location'] : ''; ?></td>
                                                 <td>
-                                                    <?php 
-                                                        $status_class = '';
-                                                        switch($asset['status']) {
-                                                            case 'Available':
-                                                                $status_class = 'asset-status-available';
-                                                                break;
-                                                            case 'In Use':
-                                                                $status_class = 'asset-status-in-use';
-                                                                break;
-                                                            case 'Maintenance':
-                                                                $status_class = 'asset-status-maintenance';
-                                                                break;
-                                                            case 'Retired':
-                                                                $status_class = 'asset-status-retired';
-                                                                break;
-                                                            default:
-                                                                $status_class = '';
-                                                        }
-                                                        echo '<span class="'.$status_class.'">'.$asset['status'].'</span>';
+                                                    <?php
+                                                    $status_class = '';
+                                                    switch ($asset['status']) {
+                                                        case 'Available':
+                                                            $status_class = 'asset-status-available';
+                                                            break;
+                                                        case 'In Use':
+                                                            $status_class = 'asset-status-in-use';
+                                                            break;
+                                                        case 'Maintenance':
+                                                            $status_class = 'asset-status-maintenance';
+                                                            break;
+                                                        case 'Retired':
+                                                            $status_class = 'asset-status-retired';
+                                                            break;
+                                                        default:
+                                                            $status_class = '';
+                                                    }
+                                                    echo '<span class="' . $status_class . '">' . $asset['status'] . '</span>';
                                                     ?>
                                                 </td>
                                                 <td><?php echo date('M d, Y', strtotime($asset['date_acquired'])); ?></td>
                                                 <td><?php echo $asset['description']; ?></td>
                                                 <td>
-                                                    <button class="btn btn-sm btn-info edit-btn" 
-                                                            data-id="<?php echo $asset['id']; ?>"
-                                                            data-name="<?php echo $asset['asset_name']; ?>"
-                                                            data-category="<?php echo $asset['category']; ?>"
-                                                            data-status="<?php echo $asset['status']; ?>"
-                                                            data-description="<?php echo $asset['description']; ?>"
-                                                            data-acquired="<?php echo $asset['date_acquired']; ?>"
-                                                            data-bs-toggle="modal" data-bs-target="#editAssetModal">
+                                                    <button class="btn btn-sm btn-info edit-btn"
+                                                        data-id="<?php echo $asset['id']; ?>"
+                                                        data-name="<?php echo $asset['asset_name']; ?>"
+                                                        data-category="<?php echo $asset['category']; ?>"
+                                                        data-status="<?php echo $asset['status']; ?>"
+                                                        data-description="<?php echo $asset['description']; ?>"
+                                                        data-acquired="<?php echo $asset['date_acquired']; ?>"
+                                                        data-value="<?php echo isset($asset['asset_value']) ? $asset['asset_value'] : ''; ?>"
+                                                        data-quantity="<?php echo isset($asset['quantity']) ? $asset['quantity'] : ''; ?>"
+                                                        data-unit="<?php echo isset($asset['unit']) ? $asset['unit'] : ''; ?>"
+                                                        data-location="<?php echo isset($asset['location']) ? $asset['location'] : ''; ?>"
+                                                        data-bs-toggle="modal" data-bs-target="#editAssetModal">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <a href="inventory.php?delete_id=<?php echo $asset['id']; ?>" 
-                                                       class="btn btn-sm btn-danger"
-                                                       onclick="return confirm('Are you sure you want to delete this asset?')">
+                                                    <a href="inventory.php?delete_id=<?php echo $asset['id']; ?>"
+                                                        class="btn btn-sm btn-danger"
+                                                        onclick="return confirm('Are you sure you want to delete this asset?')">
                                                         <i class="fas fa-trash"></i>
                                                     </a>
                                                 </td>
@@ -448,6 +474,20 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                             </div>
                         </div>
                         <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="quantity" class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="unit" class="form-label">Unit</label>
+                                <input type="text" class="form-control" id="unit" name="unit" placeholder="pcs, sets, etc.">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="asset_value" class="form-label">Asset Value (₱)</label>
+                                <input type="number" class="form-control" id="asset_value" name="asset_value" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="asset_status" class="form-label">Status</label>
                                 <select class="form-select" id="asset_status" name="asset_status" required>
@@ -463,6 +503,10 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                             </div>
                         </div>
                         <div class="mb-3">
+                            <label for="location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="location" name="location" placeholder="Building, Room, etc.">
+                        </div>
+                        <div class="mb-3">
                             <label for="asset_description" class="form-label">Description</label>
                             <textarea class="form-control" id="asset_description" name="asset_description" rows="3"></textarea>
                         </div>
@@ -475,6 +519,7 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
             </div>
         </div>
     </div>
+
 
     <!-- Edit Asset Modal -->
     <div class="modal fade" id="editAssetModal" tabindex="-1" aria-labelledby="editAssetModalLabel" aria-hidden="true">
@@ -503,6 +548,20 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                             </div>
                         </div>
                         <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="edit_quantity" class="form-label">Quantity</label>
+                                <input type="number" class="form-control" id="edit_quantity" name="quantity" min="1" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="edit_unit" class="form-label">Unit</label>
+                                <input type="text" class="form-control" id="edit_unit" name="unit" placeholder="pcs, sets, etc.">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="edit_asset_value" class="form-label">Asset Value (₱)</label>
+                                <input type="number" class="form-control" id="edit_asset_value" name="asset_value" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
                             <div class="col-md-6">
                                 <label for="edit_asset_status" class="form-label">Status</label>
                                 <select class="form-select" id="edit_asset_status" name="asset_status" required>
@@ -518,6 +577,10 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                             </div>
                         </div>
                         <div class="mb-3">
+                            <label for="edit_location" class="form-label">Location</label>
+                            <input type="text" class="form-control" id="edit_location" name="location" placeholder="Building, Room, etc.">
+                        </div>
+                        <div class="mb-3">
                             <label for="edit_asset_description" class="form-label">Description</label>
                             <textarea class="form-control" id="edit_asset_description" name="asset_description" rows="3"></textarea>
                         </div>
@@ -530,6 +593,7 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
             </div>
         </div>
     </div>
+
 
     <!-- Category Management Modal -->
     <div class="modal fade" id="addCategoryModal" tabindex="-1" aria-labelledby="addCategoryModalLabel" aria-hidden="true">
@@ -565,7 +629,7 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <?php foreach ($categories as $category): 
+                                        <?php foreach ($categories as $category):
                                             // Count assets in this category
                                             $count_query = "SELECT COUNT(*) as count FROM assets WHERE category = '" . $category['category_name'] . "'";
                                             $count_result = mysqli_query($conn, $count_query);
@@ -577,9 +641,9 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                                 <td><?php echo $count_data['count']; ?></td>
                                                 <td>
                                                     <?php if ($count_data['count'] == 0): ?>
-                                                        <a href="inventory.php?delete_category=<?php echo $category['id']; ?>" 
-                                                           class="btn btn-sm btn-danger"
-                                                           onclick="return confirm('Are you sure you want to delete this category?')">
+                                                        <a href="inventory.php?delete_category=<?php echo $category['id']; ?>"
+                                                            class="btn btn-sm btn-danger"
+                                                            onclick="return confirm('Are you sure you want to delete this category?')">
                                                             <i class="fas fa-trash"></i>
                                                         </a>
                                                     <?php else: ?>
@@ -621,14 +685,16 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-    
+
     <script>
         $(document).ready(function() {
             // Initialize DataTable
             $('#assetsTable').DataTable({
-                order: [[0, 'desc']]
+                order: [
+                    [0, 'desc']
+                ]
             });
-            
+
             // Handle edit button clicks
             $('.edit-btn').click(function() {
                 const id = $(this).data('id');
@@ -637,33 +703,42 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                 const status = $(this).data('status');
                 const description = $(this).data('description');
                 const acquired = $(this).data('acquired');
-                
+                const value = $(this).data('value');
+                const quantity = $(this).data('quantity');
+                const unit = $(this).data('unit');
+                const location = $(this).data('location');
+
                 $('#edit_asset_id').val(id);
                 $('#edit_asset_name').val(name);
                 $('#edit_asset_category').val(category);
                 $('#edit_asset_status').val(status);
                 $('#edit_asset_description').val(description);
                 $('#edit_date_acquired').val(acquired);
+                $('#edit_asset_value').val(value);
+                $('#edit_quantity').val(quantity || 1);
+                $('#edit_unit').val(unit);
+                $('#edit_location').val(location);
             });
-            
+
+
             // Auto dismiss alerts after 5 seconds
             setTimeout(function() {
                 $('.alert').alert('close');
             }, 5000);
-            
+
             // Toggle sidebar on mobile
             $('#sidebarToggle').on('click', function() {
                 $('#sidebar').toggleClass('collapsed');
                 $('.main-content').toggleClass('expanded');
             });
-            
+
             // Initialize tooltips
             const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function (tooltipTriggerEl) {
+            tooltipTriggerList.map(function(tooltipTriggerEl) {
                 return new bootstrap.Tooltip(tooltipTriggerEl);
             });
         });
     </script>
 </body>
-</html>
 
+</html>
