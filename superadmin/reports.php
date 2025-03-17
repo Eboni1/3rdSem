@@ -315,66 +315,6 @@ if (!empty($export_format)) {
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <style>
-        .report-card {
-            transition: transform 0.3s;
-            cursor: pointer;
-            height: 100%;
-        }
-        
-        .report-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .report-card.active {
-            border-color: #0d6efd;
-            border-width: 2px;
-        }
-        
-        .report-icon {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-        }
-        
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-        
-        .filter-section {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-        
-        .status-available {
-            background-color: #d1e7dd;
-            color: #0f5132;
-        }
-        
-        .status-in-use {
-            background-color: #cff4fc;
-            color: #055160;
-        }
-        
-        .status-maintenance {
-            background-color: #fff3cd;
-            color: #664d03;
-        }
-        
-        .status-retired {
-            background-color: #f8d7da;
-            color: #842029;
-        }
-    </style>
 </head>
 <body>
     <div class="wrapper">
@@ -704,4 +644,204 @@ if (!empty($export_format)) {
                                                     <th>Maintenance Date</th>
                                                     <th>Description</th>
                                                     <th>Cost</th>
-                                                    <th>
+                                                    <th>Performed By</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($report_data as $record): ?>
+                                                    <tr>
+                                                        <td><?php echo $record['asset_name']; ?></td>
+                                                        <td><?php echo $record['category']; ?></td>
+                                                        <td><?php echo date('M d, Y', strtotime($record['maintenance_date'])); ?></td>
+                                                        <td><?php echo $record['description']; ?></td>
+                                                        <td>$<?php echo number_format($record['cost'], 2); ?></td>
+                                                        <td><?php echo $record['performed_by']; ?></td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                            <tfoot>
+                                                <tr class="table-primary">
+                                                    <td colspan="4"><strong>Total Maintenance Cost</strong></td>
+                                                    <td colspan="2"><strong>$<?php 
+                                                        $total_cost = array_sum(array_column($report_data, 'cost'));
+                                                        echo number_format($total_cost, 2); 
+                                                    ?></strong></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                <?php endif; ?>
+                                
+                            <?php elseif ($report_type == 'value_report'): ?>
+                                <!-- Asset Value Report -->
+                                <div class="chart-container mb-4">
+                                    <canvas id="valueChart"></canvas>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Category</th>
+                                                <th>Total Value</th>
+                                                <th>Asset Count</th>
+                                                <th>Average Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php 
+                                            $grand_total = 0;
+                                            $total_assets = 0;
+                                            
+                                            foreach ($report_data as $row): 
+                                                $grand_total += $row['total_value'] ? $row['total_value'] : 0;
+                                                $total_assets += $row['asset_count'];
+                                                $avg_value = $row['asset_count'] > 0 ? $row['total_value'] / $row['asset_count'] : 0;
+                                            ?>
+                                                <tr>
+                                                    <td><?php echo $row['category']; ?></td>
+                                                    <td>$<?php echo number_format($row['total_value'] ? $row['total_value'] : 0, 2); ?></td>
+                                                    <td><?php echo $row['asset_count']; ?></td>
+                                                    <td>$<?php echo number_format($avg_value, 2); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            <tr class="table-primary">
+                                                <td><strong>Total</strong></td>
+                                                <td><strong>$<?php echo number_format($grand_total, 2); ?></strong></td>
+                                                <td><strong><?php echo $total_assets; ?></strong></td>
+                                                <td><strong>$<?php 
+                                                    $overall_avg = $total_assets > 0 ? $grand_total / $total_assets : 0;
+                                                    echo number_format($overall_avg, 2); 
+                                                ?></strong></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        <!-- jQuery -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+    $(document).ready(function() {
+        // Initialize DataTables only if the table exists
+        let tables = ['#assetStatusTable', '#maintenanceTable'];
+        tables.forEach(function(table) {
+            if ($(table).length) {
+                $(table).DataTable({
+                    responsive: true,
+                    pageLength: 10,
+                    lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                    destroy: true // Prevent duplicate initialization
+                });
+            }
+        });
+
+        // Print report functionality
+        $('#printReport').click(function(e) {
+            e.preventDefault();
+            window.print();
+        });
+
+        // Initialize charts based on report type
+        <?php if ($report_type == 'asset_summary' && !empty($chart_data['status']) && !empty($chart_data['category'])): ?>
+            // Status Chart
+            const statusChartData = <?php echo $chart_data['status']; ?>;
+            if (document.getElementById('statusChart')) {
+                const statusCtx = document.getElementById('statusChart').getContext('2d');
+                new Chart(statusCtx, {
+                    type: 'pie',
+                    data: {
+                        labels: statusChartData.map(item => item.label),
+                        datasets: [{
+                            data: statusChartData.map(item => item.value),
+                            backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#007bff']
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+            }
+
+            // Category Chart
+            const categoryChartData = <?php echo $chart_data['category']; ?>;
+            if (document.getElementById('categoryChart')) {
+                const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+                new Chart(categoryCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: categoryChartData.map(item => item.label),
+                        datasets: [{
+                            data: categoryChartData.map(item => item.value),
+                            backgroundColor: '#007bff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            }
+        <?php endif; ?>
+
+        <?php if ($report_type == 'asset_acquisition' && !empty($chart_data['acquisition'])): ?>
+            // Asset Acquisition Chart
+            const acquisitionChartData = <?php echo $chart_data['acquisition']; ?>;
+            if (document.getElementById('acquisitionChart')) {
+                const acquisitionCtx = document.getElementById('acquisitionChart').getContext('2d');
+                new Chart(acquisitionCtx, {
+                    type: 'line',
+                    data: {
+                        labels: acquisitionChartData.map(item => item.label),
+                        datasets: [{
+                            label: 'Assets Acquired',
+                            data: acquisitionChartData.map(item => item.value),
+                            borderColor: '#28a745',
+                            backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            }
+        <?php endif; ?>
+
+        <?php if ($report_type == 'value_report' && !empty($chart_data['value'])): ?>
+            // Asset Value Chart
+            const valueChartData = <?php echo $chart_data['value']; ?>;
+            if (document.getElementById('valueChart')) {
+                const valueCtx = document.getElementById('valueChart').getContext('2d');
+                new Chart(valueCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: valueChartData.map(item => item.label),
+                        datasets: [{
+                            data: valueChartData.map(item => item.value),
+                            backgroundColor: ['#007bff', '#28a745', '#ffc107', '#dc3545']
+                        }]
+                    },
+                    options: { responsive: true }
+                });
+            }
+        <?php endif; ?>
+    });
+    </script>
+
+                

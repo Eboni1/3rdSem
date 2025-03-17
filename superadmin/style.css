@@ -323,3 +323,62 @@ body {
         display: block;
     }
 }
+
+.report-card {
+    transition: transform 0.3s;
+    cursor: pointer;
+    height: 100%;
+}
+
+.report-card:hover {
+    transform: translateY(-5px);
+}
+
+.report-card.active {
+    border-color: #0d6efd;
+    border-width: 2px;
+}
+
+.report-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.filter-section {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.status-available {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.status-in-use {
+    background-color: #cff4fc;
+    color: #055160;
+}
+
+.status-maintenance {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+.status-retired {
+    background-color: #f8d7da;
+    color: #842029;
+}
