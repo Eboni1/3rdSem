@@ -733,6 +733,14 @@ if (!empty($export_format)) {
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
 
+        <!-- jQuery -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+
     <script>
     $(document).ready(function() {
         // Initialize DataTables only if the table exists
@@ -756,7 +764,7 @@ if (!empty($export_format)) {
 
         // Initialize charts based on report type
         <?php if ($report_type == 'asset_summary' && !empty($chart_data['status']) && !empty($chart_data['category'])): ?>
-            // Status Chart
+            // Asset Status Chart
             const statusChartData = <?php echo $chart_data['status']; ?>;
             if (document.getElementById('statusChart')) {
                 const statusCtx = document.getElementById('statusChart').getContext('2d');
@@ -773,7 +781,7 @@ if (!empty($export_format)) {
                 });
             }
 
-            // Category Chart
+            // Asset Category Chart
             const categoryChartData = <?php echo $chart_data['category']; ?>;
             if (document.getElementById('categoryChart')) {
                 const categoryCtx = document.getElementById('categoryChart').getContext('2d');
@@ -824,7 +832,7 @@ if (!empty($export_format)) {
         <?php endif; ?>
 
         <?php if ($report_type == 'value_report' && !empty($chart_data['value'])): ?>
-            // Asset Value Chart
+            // Asset Value Report Chart
             const valueChartData = <?php echo $chart_data['value']; ?>;
             if (document.getElementById('valueChart')) {
                 const valueCtx = document.getElementById('valueChart').getContext('2d');
@@ -843,5 +851,3 @@ if (!empty($export_format)) {
         <?php endif; ?>
     });
     </script>
-
-                
