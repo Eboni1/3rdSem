@@ -395,7 +395,7 @@ if (!empty($export_format)) {
                             <div class="card report-card <?php echo $report_type == 'value_report' ? 'active' : ''; ?>" onclick="window.location.href='reports.php?type=value_report'">
                                 <div class="card-body text-center">
                                     <div class="report-icon text-warning">
-                                        <i class="fas fa-dollar-sign"></i>
+                                        <i class="fas fa-peso-sign"></i>
                                     </div>
                                     <h5 class="card-title">Value Report</h5>
                                     <p class="card-text small text-muted">Asset valuation by category</p>
@@ -700,16 +700,16 @@ if (!empty($export_format)) {
                                             ?>
                                                 <tr>
                                                     <td><?php echo $row['category']; ?></td>
-                                                    <td>$<?php echo number_format($row['total_value'] ? $row['total_value'] : 0, 2); ?></td>
+                                                    <td>₱<?php echo number_format($row['total_value'] ? $row['total_value'] : 0, 2); ?></td>
                                                     <td><?php echo $row['asset_count']; ?></td>
-                                                    <td>$<?php echo number_format($avg_value, 2); ?></td>
+                                                    <td>₱<?php echo number_format($avg_value, 2); ?></td>
                                                 </tr>
                                             <?php endforeach; ?>
                                             <tr class="table-primary">
                                                 <td><strong>Total</strong></td>
-                                                <td><strong>$<?php echo number_format($grand_total, 2); ?></strong></td>
+                                                <td><strong>₱<?php echo number_format($grand_total, 2); ?></strong></td>
                                                 <td><strong><?php echo $total_assets; ?></strong></td>
-                                                <td><strong>$<?php 
+                                                <td><strong>₱<?php 
                                                     $overall_avg = $total_assets > 0 ? $grand_total / $total_assets : 0;
                                                     echo number_format($overall_avg, 2); 
                                                 ?></strong></td>
