@@ -120,7 +120,7 @@ $categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
             <li><a href="inventory.php"><i class="bi bi-box-seam"></i> Inventory</a></li>
             <li><a href="#"><i class="bi bi-cart3"></i> Orders</a></li>
             <li><a href="reports.php"><i class="bi bi-graph-up"></i> Reports</a></li>
-            <li><a href="#"><i class="bi bi-gear"></i> Settings</a></li>
+            <li><a href="settings.php"><i class="bi bi-gear"></i> Settings</a></li>
             <li><a href="../logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
         </ul>
     </div>
@@ -143,7 +143,7 @@ $categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="profile.php"><i class="bi bi-person me-2"></i>Profile</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
+                        <li><a class="dropdown-item" href="settings.php"><i class="bi bi-gear me-2"></i>Settings</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                     </ul>
