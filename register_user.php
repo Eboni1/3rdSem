@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once "connect.php"; // Database connection
-include "../audit_trail.php"; // Include audit trail function
+include "superadmin/audit_trail.php"; // Include audit trail function
 
 
 // Ensure only Super Admins can register new users
