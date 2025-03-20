@@ -328,7 +328,7 @@ $categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                 <div class="col-lg-6 mb-4">
                     <div class="user-form">
                         <h4 class="mb-4"><i class="bi bi-person-plus me-2"></i>Register a New User</h4>
-                        <form action="register_user.php" method="post">
+                        <form action="../register_user.php" method="post">
                             <div class="mb-3">
                                 <label for="username" class="form-label">Username</label>
                                 <div class="input-group">
