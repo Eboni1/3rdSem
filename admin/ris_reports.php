@@ -25,112 +25,71 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $per_page = 10;
 $offset = ($page - 1) * $per_page;
 
-// Handle actions (approve, reject, delete)
+// Handle actions (approve, reject)
 if (isset($_GET['action']) && isset($_GET['id'])) {
     $action = $_GET['action'];
     $report_id = (int)$_GET['id'];
 
     try {
-        $db = new PDO("mysql:host=" . $host . ";dbname=" . $dbname, $db_user, $db_pass);
+        $db = new PDO("mysql:host=$host;dbname=$dbname", $db_user, $db_pass);
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         if ($action === 'approve') {
-            $stmt = $db->prepare("UPDATE reports SET status = 'approved', approved_by = ?, approved_at = NOW() WHERE id = ? AND type = 'RIS'");
+            $stmt = $db->prepare("UPDATE ris_reports SET status = 'approved', approved_by = ?, approved_at = NOW() WHERE id = ?");
             $stmt->execute([$_SESSION['user_id'], $report_id]);
 
             // Log the activity
-            $stmt = $db->prepare("INSERT INTO activity_logs (user_id, user_name, action, action_type, created_at) VALUES (?, ?, ?, 'report', NOW())");
+            $stmt = $db->prepare("INSERT INTO activity_logs (user_id, user_name, action, action_type, created_at) VALUES (?, ?, ?, 'RIS', NOW())");
             $stmt->execute([$_SESSION['user_id'], $_SESSION['username'], "approved RIS report #$report_id"]);
 
             $success = "RIS Report #$report_id has been approved successfully.";
         } elseif ($action === 'reject') {
-            $stmt = $db->prepare("UPDATE reports SET status = 'rejected', rejected_by = ?, rejected_at = NOW() WHERE id = ? AND type = 'RIS'");
+            $stmt = $db->prepare("UPDATE ris_reports SET status = 'rejected', rejected_by = ?, rejected_at = NOW() WHERE id = ?");
             $stmt->execute([$_SESSION['user_id'], $report_id]);
 
             // Log the activity
-            $stmt = $db->prepare("INSERT INTO activity_logs (user_id, user_name, action, action_type, created_at) VALUES (?, ?, ?, 'report', NOW())");
+            $stmt = $db->prepare("INSERT INTO activity_logs (user_id, user_name, action, action_type, created_at) VALUES (?, ?, ?, 'RIS', NOW())");
             $stmt->execute([$_SESSION['user_id'], $_SESSION['username'], "rejected RIS report #$report_id"]);
 
             $success = "RIS Report #$report_id has been rejected.";
-        } elseif ($action === 'delete') {
-            // First check if the user has permission to delete
-            if ($_SESSION['role'] === 'admin') {
-                $stmt = $db->prepare("DELETE FROM reports WHERE id = ? AND type = 'RIS'");
-                $stmt->execute([$report_id]);
-
-                // Log the activity
-                $stmt = $db->prepare("INSERT INTO activity_logs (user_id, user_name, action, action_type, created_at) VALUES (?, ?, ?, 'report', NOW())");
-                $stmt->execute([$_SESSION['user_id'], $_SESSION['username'], "deleted RIS report #$report_id"]);
-
-                $success = "RIS Report #$report_id has been deleted.";
-            } else {
-                $error = "You don't have permission to delete reports.";
-            }
         }
     } catch (PDOException $e) {
         $error = "Database error: " . $e->getMessage();
     }
 }
 
+
 // Fetch RIS reports with filtering
 try {
-    $db = new PDO("mysql:host=" . $host . ";dbname=" . $dbname, $db_user, $db_pass);
+    $db = new PDO("mysql:host=$host;dbname=$dbname", $db_user, $db_pass);
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Build the query with filters
-    $query = "SELECT r.*, 
-              u1.username as created_by_name,
-              u2.username as approved_by_name,
-              u3.username as rejected_by_name
-              FROM reports r
-              LEFT JOIN users u1 ON r.created_by = u1.id
-              LEFT JOIN users u2 ON r.approved_by = u2.id
-              LEFT JOIN users u3 ON r.rejected_by = u3.id
-              WHERE r.type = 'RIS'";
+    // Fetch RIS reports
+    $query = "SELECT r.id, r.ris_number, r.title, r.status, r.created_at, 
+                 u.username AS created_by_name,
+                 COALESCE(GROUP_CONCAT(CONCAT(i.item_name, ' (', i.quantity, ' ', i.unit, ')') SEPARATOR ', '), '') AS items_list
+          FROM ris_reports r
+          LEFT JOIN users u ON r.created_by = u.id
+          LEFT JOIN ris_items i ON r.id = i.ris_id
+          GROUP BY r.id
+          ORDER BY r.created_at DESC";
 
-    $params = [];
-
-    if (!empty($search)) {
-        $query .= " AND (r.report_number LIKE ? OR r.title LIKE ? OR r.description LIKE ?)";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-    }
-
-    if (!empty($status)) {
-        $query .= " AND r.status = ?";
-        $params[] = $status;
-    }
-
-    if (!empty($date_from)) {
-        $query .= " AND DATE(r.created_at) >= ?";
-        $params[] = $date_from;
-    }
-
-    if (!empty($date_to)) {
-        $query .= " AND DATE(r.created_at) <= ?";
-        $params[] = $date_to;
-    }
-
-    // Count total records for pagination
-    $countStmt = $db->prepare(str_replace("r.*, u1.username as created_by_name, u2.username as approved_by_name, u3.username as rejected_by_name", "COUNT(*) as total", $query));
-    $countStmt->execute($params);
-    $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
-    $total_records = $countResult ? $countResult['total'] : 0;
-    $total_pages = ceil($total_records / $per_page);
-
-    // Add sorting and pagination
-    $query .= " ORDER BY r.created_at DESC LIMIT $offset, $per_page";
 
     $stmt = $db->prepare($query);
-    $stmt->execute($params);
+    $stmt->execute();
     $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // ✅ Count total records
+    $countStmt = $db->prepare("SELECT COUNT(*) AS total FROM ris_reports");
+    $countStmt->execute();
+    $countResult = $countStmt->fetch(PDO::FETCH_ASSOC);
+    $total_records = $countResult ? (int) $countResult['total'] : 0;
+    $total_pages = ceil($total_records / $per_page);
 } catch (PDOException $e) {
     $error = "Database error: " . $e->getMessage();
     $reports = [];
-    $total_pages = 0;
-    $total_records = 0;
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -202,9 +161,10 @@ try {
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">RIS Reports Management</h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
-                        <a href="new_ris.php" class="btn btn-sm btn-primary">
+                        <!-- New RIS Report Button -->
+                        <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#risModal">
                             <i class="fas fa-plus"></i> New RIS Report
-                        </a>
+                        </button>
 
                         <div class="dropdown">
                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
@@ -279,7 +239,7 @@ try {
                 <div class="card shadow mb-4">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
                         <h6 class="m-0 font-weight-bold text-primary">RIS Reports List</h6>
-                        <span class="badge bg-primary"><?php echo number_format($total_records); ?> Total Reports</span>
+                        <span class="badge bg-primary"><?php echo number_format($total_records ?? 0); ?> Total Reports</span>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -288,6 +248,7 @@ try {
                                     <tr>
                                         <th>Report #</th>
                                         <th>Title</th>
+                                        <th>Items</th> <!-- NEW COLUMN -->
                                         <th>Status</th>
                                         <th>Created By</th>
                                         <th>Created Date</th>
@@ -297,13 +258,14 @@ try {
                                 <tbody>
                                     <?php if (empty($reports)): ?>
                                         <tr>
-                                            <td colspan="6" class="text-center">No RIS reports found.</td>
+                                            <td colspan="7" class="text-center">No RIS reports found.</td>
                                         </tr>
                                     <?php else: ?>
                                         <?php foreach ($reports as $report): ?>
                                             <tr>
-                                                <td><?php echo htmlspecialchars($report['report_number']); ?></td>
+                                                <td><?php echo htmlspecialchars($report['ris_number']); ?></td>
                                                 <td><?php echo htmlspecialchars($report['title']); ?></td>
+                                                <td><?php echo htmlspecialchars($report['items_list'] ?: 'No items'); ?></td> <!-- DISPLAY ITEMS -->
                                                 <td>
                                                     <?php if ($report['status'] === 'pending'): ?>
                                                         <span class="badge bg-warning status-badge">Pending</span>
@@ -319,7 +281,6 @@ try {
                                                     <a href="view_report.php?id=<?php echo $report['id']; ?>" class="btn btn-info btn-sm" title="View">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-
                                                     <?php if ($report['status'] === 'pending'): ?>
                                                         <a href="ris_reports.php?action=approve&id=<?php echo $report['id']; ?>" class="btn btn-success btn-sm" title="Approve" onclick="return confirm('Are you sure you want to approve this report?');">
                                                             <i class="fas fa-check"></i>
@@ -328,15 +289,12 @@ try {
                                                             <i class="fas fa-times"></i>
                                                         </a>
                                                     <?php endif; ?>
-
                                                     <a href="edit_report.php?id=<?php echo $report['id']; ?>" class="btn btn-primary btn-sm" title="Edit">
                                                         <i class="fas fa-edit"></i>
                                                     </a>
-
                                                     <a href="ris_reports.php?action=delete&id=<?php echo $report['id']; ?>" class="btn btn-danger btn-sm" title="Delete" onclick="return confirm('Are you sure you want to delete this report? This action cannot be undone.');">
                                                         <i class="fas fa-trash"></i>
                                                     </a>
-
                                                     <a href="print_report.php?id=<?php echo $report['id']; ?>" class="btn btn-secondary btn-sm" title="Print" target="_blank">
                                                         <i class="fas fa-print"></i>
                                                     </a>
@@ -347,41 +305,103 @@ try {
                                 </tbody>
                             </table>
                         </div>
-
-                        <!-- Pagination -->
-                        <?php if ($total_pages > 1): ?>
-                            <nav aria-label="Page navigation">
-                                <ul class="pagination justify-content-center mt-4">
-                                    <?php if ($page > 1): ?>
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>" aria-label="Previous">
-                                                <span aria-hidden="true">&laquo;</span>
-                                            </a>
-                                        </li>
-                                    <?php endif; ?>
-
-                                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                        <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
-                                            <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>">
-                                                <?php echo $i; ?>
-                                            </a>
-                                        </li>
-                                    <?php endfor; ?>
-
-                                    <?php if ($page < $total_pages): ?>
-                                        <li class="page-item">
-                                            <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>" aria-label="Next">
-                                                <span aria-hidden="true">&raquo;</span>
-                                            </a>
-                                        </li>
-                                    <?php endif; ?>
-                                </ul>
-                            </nav>
-                        <?php endif; ?>
                     </div>
                 </div>
-            </main>
+
+
+                <!-- Pagination -->
+                <?php if ($total_pages > 1): ?>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center mt-4">
+                            <?php if ($page > 1): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=<?php echo $page - 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>" aria-label="Previous">
+                                        <span aria-hidden="true">&laquo;</span>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+
+                            <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                                    <a class="page-link" href="?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>">
+                                        <?php echo $i; ?>
+                                    </a>
+                                </li>
+                            <?php endfor; ?>
+
+                            <?php if ($page < $total_pages): ?>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=<?php echo $page + 1; ?>&search=<?php echo urlencode($search); ?>&status=<?php echo urlencode($status); ?>&date_from=<?php echo urlencode($date_from); ?>&date_to=<?php echo urlencode($date_to); ?>" aria-label="Next">
+                                        <span aria-hidden="true">&raquo;</span>
+                                    </a>
+                                </li>
+                            <?php endif; ?>
+                        </ul>
+                    </nav>
+                <?php endif; ?>
+
+                <!-- RIS Report Modal -->
+                <div class="modal fade" id="risModal" tabindex="-1" aria-labelledby="risModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="risModalLabel">Create New RIS Report</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="risAlert" class="alert d-none"></div>
+
+                                <form id="risForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Title</label>
+                                        <input type="text" class="form-control" name="title" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Requesting Office</label>
+                                        <input type="text" class="form-control" name="requesting_office" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label">Purpose</label>
+                                        <textarea class="form-control" name="purpose" rows="3" required></textarea>
+                                    </div>
+
+                                    <h5>Requested Items</h5>
+                                    <table class="table table-bordered" id="itemsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>Item Name</th>
+                                                <th>Quantity</th>
+                                                <th>Unit</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><input type="text" name="items[0][name]" class="form-control" required></td>
+                                                <td><input type="number" name="items[0][quantity]" class="form-control" required></td>
+                                                <td><input type="text" name="items[0][unit]" class="form-control" required></td>
+                                                <td><button type="button" class="btn btn-danger remove-row">X</button></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <button type="button" class="btn btn-secondary" id="addRow">Add Item</button>
+
+                                    <br><br>
+                                    <button type="submit" class="btn btn-primary">Submit RIS</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+
         </div>
+    </div>
+    </main>
+    </div>
     </div>
 
     <!-- Bootstrap JS Bundle with Popper -->
@@ -391,6 +411,10 @@ try {
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
+    <!-- jQuery for AJAX -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
 
     <script>
         // Initialize DataTables with pagination disabled (we're using our own server-side pagination)
@@ -401,6 +425,57 @@ try {
                 "ordering": true,
                 "info": false,
                 "responsive": true
+            });
+        });
+
+        $(document).ready(function() {
+            let rowIndex = 1;
+
+            // Add new row
+            $("#addRow").click(function() {
+                let newRow = `
+                <tr>
+                    <td><input type="text" name="items[${rowIndex}][name]" class="form-control" required></td>
+                    <td><input type="number" name="items[${rowIndex}][quantity]" class="form-control" required></td>
+                    <td><input type="text" name="items[${rowIndex}][unit]" class="form-control" required></td>
+                    <td><button type="button" class="btn btn-danger remove-row">X</button></td>
+                </tr>`;
+                $("#itemsTable tbody").append(newRow);
+                rowIndex++;
+            });
+
+            // Remove row
+            $(document).on("click", ".remove-row", function() {
+                $(this).closest("tr").remove();
+            });
+
+            // AJAX Form Submission
+            $("#risForm").submit(function(event) {
+                event.preventDefault();
+                let formData = $(this).serialize();
+
+                $.ajax({
+                    url: "save_ris.php",
+                    type: "POST",
+                    data: formData,
+                    success: function(response) {
+                        let data = JSON.parse(response);
+
+                        if (data.success) {
+                            $("#risAlert").removeClass("d-none alert-danger").addClass("alert-success").text(data.message);
+                            $("#risForm")[0].reset();
+                            $("#itemsTable tbody").html(`<tr>
+                            <td><input type="text" name="items[0][name]" class="form-control" required></td>
+                            <td><input type="number" name="items[0][quantity]" class="form-control" required></td>
+                            <td><input type="text" name="items[0][unit]" class="form-control" required></td>
+                            <td><button type="button" class="btn btn-danger remove-row">X</button></td>
+                        </tr>`);
+                            rowIndex = 1;
+                        } else {
+                            $("#risAlert").removeClass("d-none alert-success").addClass("alert-danger").text(data.message);
+                        }
+                    }
+                });
             });
         });
     </script>
