@@ -329,7 +329,7 @@ if (!empty($export_format)) {
                 <li><a href="inventory.php"><i class="bi bi-box-seam"></i> Inventory</a></li>
                 <li><a href="#"><i class="bi bi-cart3"></i> Orders</a></li>
                 <li class="active"><a href="reports.php"><i class="bi bi-graph-up"></i> Reports</a></li>
-                <li><a href="#"><i class="bi bi-gear"></i> Settings</a></li>
+                <li><a href="settings.php"><i class="bi bi-gear"></i> Settings</a></li>
                 <li><a href="../logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
             </ul>
         </div>

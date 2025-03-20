@@ -1,6 +1,8 @@
 <?php
 session_start();
 include "../connect.php"; // Include database connection
+include "audit_trail.php"; // Include audit trail function
+
 if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
     header("Location: ../index.php"); // Redirect if not Super Admin
     exit;
@@ -16,11 +18,14 @@ if (isset($_POST['toggle_status']) && isset($_POST['user_id'])) {
     $stmt->execute();
     $stmt->close();
     
+    // Log the activity
+    $action = "Changed user ID $user_id status to $new_status";
+    log_activity($conn, $action, "User Management");
+    
     // Redirect to refresh the page
     header("Location: user_management.php");
     exit;
 }
-
 // Fetch all users
 $stmt = $conn->prepare("SELECT id, username, email, role, status, created_at FROM users ORDER BY created_at DESC");
 $stmt->execute();

@@ -1,6 +1,8 @@
 <?php
 session_start();
 require_once "connect.php"; // Database connection
+include "../audit_trail.php"; // Include audit trail function
+
 
 // Ensure only Super Admins can register new users
 if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {

@@ -1,6 +1,8 @@
 <?php
 session_start();
 include "../connect.php"; // Include database connection
+include "audit_trail.php";
+
 if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
     header("Location: ../index.php"); // Redirect if not Super Admin
     exit;
@@ -23,7 +25,7 @@ if ($check_table->num_rows == 0) {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )";
-    
+
     if ($conn->query($create_table) === TRUE) {
         // Insert default settings
         $default_settings = [
@@ -37,17 +39,17 @@ if ($check_table->num_rows == 0) {
             ['enable_user_registration', 'false', 'Allow users to register accounts'],
             ['system_theme', 'default', 'UI theme for the system']
         ];
-        
+
         $insert_stmt = $conn->prepare("INSERT INTO system_settings (setting_name, setting_value, setting_description) VALUES (?, ?, ?)");
         $insert_stmt->bind_param("sss", $name, $value, $description);
-        
+
         foreach ($default_settings as $setting) {
             $name = $setting[0];
             $value = $setting[1];
             $description = $setting[2];
             $insert_stmt->execute();
         }
-        
+
         $insert_stmt->close();
     } else {
         $error_message = "Error creating settings table: " . $conn->error;
@@ -56,14 +58,37 @@ if ($check_table->num_rows == 0) {
 
 // Process form submission to update settings
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_settings'])) {
+    $changes = [];
+
     foreach ($_POST as $key => $value) {
         if ($key != 'update_settings') {
+            // Get the old value to log the change
+            $stmt = $conn->prepare("SELECT setting_value FROM system_settings WHERE setting_name = ?");
+            $stmt->bind_param("s", $key);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($row = $result->fetch_assoc()) {
+                $old_value = $row['setting_value'];
+                if ($old_value != $value) {
+                    $changes[] = "$key: from '$old_value' to '$value'";
+                }
+            }
+            $stmt->close();
+
+            // Update the setting
             $stmt = $conn->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_name = ?");
             $stmt->bind_param("ss", $value, $key);
             $stmt->execute();
             $stmt->close();
         }
     }
+
+    // Log the activity if there were changes
+    if (!empty($changes)) {
+        $action = "Updated settings: " . implode(", ", $changes);
+        log_activity($conn, $action, "System Settings");
+    }
+
     $success_message = "Settings updated successfully!";
 }
 
@@ -85,18 +110,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_setting'])) {
     $new_setting_name = $_POST['new_setting_name'];
     $new_setting_value = $_POST['new_setting_value'];
     $new_setting_description = $_POST['new_setting_description'];
-    
+
     // Check if setting already exists
     $check_stmt = $conn->prepare("SELECT id FROM system_settings WHERE setting_name = ?");
     $check_stmt->bind_param("s", $new_setting_name);
     $check_stmt->execute();
     $check_result = $check_stmt->get_result();
-    
+
     if ($check_result->num_rows == 0) {
         $insert_stmt = $conn->prepare("INSERT INTO system_settings (setting_name, setting_value, setting_description) VALUES (?, ?, ?)");
         $insert_stmt->bind_param("sss", $new_setting_name, $new_setting_value, $new_setting_description);
-        
+
         if ($insert_stmt->execute()) {
+            // Log the activity
+            $action = "Added new setting: $new_setting_name with value: $new_setting_value";
+            log_activity($conn, $action, "System Settings");
+
             $success_message = "New setting added successfully!";
             // Refresh settings
             header("Location: settings.php");
@@ -111,19 +140,34 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add_setting'])) {
     $check_stmt->close();
 }
 
-// Delete setting
+// Delete setting with audit trail
 if (isset($_GET['delete']) && !empty($_GET['delete'])) {
     $setting_to_delete = $_GET['delete'];
+    
+    // Get the setting value before deleting
+    $stmt = $conn->prepare("SELECT setting_value FROM system_settings WHERE setting_name = ?");
+    $stmt->bind_param("s", $setting_to_delete);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $setting_value = "";
+    if ($row = $result->fetch_assoc()) {
+        $setting_value = $row['setting_value'];
+    }
+    $stmt->close();
     
     $delete_stmt = $conn->prepare("DELETE FROM system_settings WHERE setting_name = ?");
     $delete_stmt->bind_param("s", $setting_to_delete);
     
     if ($delete_stmt->execute()) {
+        // Log the activity
+        $action = "Deleted setting: $setting_to_delete with value: $setting_value";
+        log_activity($conn, $action, "System Settings");
+        
         $success_message = "Setting deleted successfully!";
         // Refresh settings
         header("Location: settings.php");
         exit;
-    } else {
+    }else {
         $error_message = "Error deleting setting: " . $conn->error;
     }
     $delete_stmt->close();
@@ -137,20 +181,20 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
     while ($row = $result->fetch_row()) {
         $tables[] = $row[0];
     }
-    
+
     $backup_file = 'database_backup_' . date('Y-m-d_H-i-s') . '.sql';
     $output = '';
-    
+
     foreach ($tables as $table) {
         // Get table structure
         $result = $conn->query("SHOW CREATE TABLE $table");
         $row = $result->fetch_row();
         $output .= "\n\n" . $row[1] . ";\n\n";
-        
+
         // Get table data
         $result = $conn->query("SELECT * FROM $table");
         $num_fields = $result->field_count;
-        
+
         while ($row = $result->fetch_row()) {
             $output .= "INSERT INTO $table VALUES(";
             for ($i = 0; $i < $num_fields; $i++) {
@@ -169,7 +213,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
         }
         $output .= "\n\n";
     }
-    
+
     // Download the backup file
     header('Content-Type: application/octet-stream');
     header('Content-Disposition: attachment; filename=' . $backup_file);
@@ -183,6 +227,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -191,6 +236,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
@@ -227,7 +273,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="profile.php"><i class="bi bi-person me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="settings.php"><i class="bi bi-gear me-2"></i>Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
                         <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                     </ul>
                 </div>
@@ -242,7 +290,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             <?php endif; ?>
-            
+
             <?php if (!empty($error_message)): ?>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     <i class="bi bi-exclamation-triangle me-2"></i> <?php echo $error_message; ?>
@@ -280,7 +328,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-md-9">
                     <div class="card">
                         <div class="card-body">
@@ -291,18 +339,18 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                     <form method="post" action="">
                                         <div class="mb-3">
                                             <label for="company_name" class="form-label">Company Name</label>
-                                            <input type="text" class="form-control" id="company_name" name="company_name" 
+                                            <input type="text" class="form-control" id="company_name" name="company_name"
                                                 value="<?php echo isset($settings['company_name']) ? htmlspecialchars($settings['company_name']['value']) : ''; ?>">
                                             <div class="form-text"><?php echo isset($settings['company_name']) ? htmlspecialchars($settings['company_name']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label for="items_per_page" class="form-label">Items Per Page</label>
-                                            <input type="number" class="form-control" id="items_per_page" name="items_per_page" 
+                                            <input type="number" class="form-control" id="items_per_page" name="items_per_page"
                                                 value="<?php echo isset($settings['items_per_page']) ? htmlspecialchars($settings['items_per_page']['value']) : '10'; ?>">
                                             <div class="form-text"><?php echo isset($settings['items_per_page']) ? htmlspecialchars($settings['items_per_page']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label for="default_currency" class="form-label">Default Currency</label>
                                             <select class="form-select" id="default_currency" name="default_currency">
@@ -313,7 +361,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                             </select>
                                             <div class="form-text"><?php echo isset($settings['default_currency']) ? htmlspecialchars($settings['default_currency']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label for="date_format" class="form-label">Date Format</label>
                                             <select class="form-select" id="date_format" name="date_format">
@@ -324,57 +372,57 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                             </select>
                                             <div class="form-text"><?php echo isset($settings['date_format']) ? htmlspecialchars($settings['date_format']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label for="enable_user_registration" class="form-label">Enable User Registration</label>
                                             <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="enable_user_registration" name="enable_user_registration" value="true" 
+                                                <input class="form-check-input" type="checkbox" id="enable_user_registration" name="enable_user_registration" value="true"
                                                     <?php echo (isset($settings['enable_user_registration']) && $settings['enable_user_registration']['value'] == 'true') ? 'checked' : ''; ?>>
                                                 <label class="form-check-label" for="enable_user_registration">Allow users to register accounts</label>
                                             </div>
                                             <div class="form-text"><?php echo isset($settings['enable_user_registration']) ? htmlspecialchars($settings['enable_user_registration']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <button type="submit" name="update_settings" class="btn btn-primary">
                                             <i class="bi bi-save me-2"></i>Save Settings
                                         </button>
                                     </form>
                                 </div>
-                                
+
                                 <!-- Email Settings -->
                                 <div class="tab-pane fade" id="email" role="tabpanel" aria-labelledby="email-tab">
                                     <h4 class="mb-4">Email Settings</h4>
                                     <form method="post" action="">
                                         <div class="mb-3">
                                             <label for="system_email" class="form-label">System Email</label>
-                                            <input type="email" class="form-control" id="system_email" name="system_email" 
+                                            <input type="email" class="form-control" id="system_email" name="system_email"
                                                 value="<?php echo isset($settings['system_email']) ? htmlspecialchars($settings['system_email']['value']) : ''; ?>">
                                             <div class="form-text"><?php echo isset($settings['system_email']) ? htmlspecialchars($settings['system_email']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label for="enable_email_notifications" class="form-label">Email Notifications</label>
                                             <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="enable_email_notifications" name="enable_email_notifications" value="true" 
+                                                <input class="form-check-input" type="checkbox" id="enable_email_notifications" name="enable_email_notifications" value="true"
                                                     <?php echo (isset($settings['enable_email_notifications']) && $settings['enable_email_notifications']['value'] == 'true') ? 'checked' : ''; ?>>
                                                 <label class="form-check-label" for="enable_email_notifications">Enable email notifications</label>
                                             </div>
                                             <div class="form-text"><?php echo isset($settings['enable_email_notifications']) ? htmlspecialchars($settings['enable_email_notifications']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label for="maintenance_reminder_days" class="form-label">Maintenance Reminder Days</label>
-                                            <input type="number" class="form-control" id="maintenance_reminder_days" name="maintenance_reminder_days" 
+                                            <input type="number" class="form-control" id="maintenance_reminder_days" name="maintenance_reminder_days"
                                                 value="<?php echo isset($settings['maintenance_reminder_days']) ? htmlspecialchars($settings['maintenance_reminder_days']['value']) : '30'; ?>">
                                             <div class="form-text"><?php echo isset($settings['maintenance_reminder_days']) ? htmlspecialchars($settings['maintenance_reminder_days']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <button type="submit" name="update_settings" class="btn btn-primary">
                                             <i class="bi bi-save me-2"></i>Save Settings
                                         </button>
                                     </form>
                                 </div>
-                                
+
                                 <!-- Appearance Settings -->
                                 <div class="tab-pane fade" id="appearance" role="tabpanel" aria-labelledby="appearance-tab">
                                     <h4 class="mb-4">Appearance Settings</h4>
@@ -389,7 +437,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                             </select>
                                             <div class="form-text"><?php echo isset($settings['system_theme']) ? htmlspecialchars($settings['system_theme']['description']) : ''; ?></div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label class="form-label">Theme Preview</label>
                                             <div class="card">
@@ -409,58 +457,58 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <button type="submit" name="update_settings" class="btn btn-primary">
                                             <i class="bi bi-save me-2"></i>Save Settings
                                         </button>
                                     </form>
                                 </div>
-                                
+
                                 <!-- Advanced Settings -->
                                 <div class="tab-pane fade" id="advanced" role="tabpanel" aria-labelledby="advanced-tab">
                                     <h4 class="mb-4">Advanced Settings</h4>
                                     <div class="alert alert-warning">
                                         <i class="bi bi-exclamation-triangle me-2"></i> Changing these settings may affect system functionality. Proceed with caution.
                                     </div>
-                                    
+
                                     <form method="post" action="">
                                         <div class="mb-3">
                                             <label for="debug_mode" class="form-label">Debug Mode</label>
                                             <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="debug_mode" name="debug_mode" value="true" 
+                                                <input class="form-check-input" type="checkbox" id="debug_mode" name="debug_mode" value="true"
                                                     <?php echo (isset($settings['debug_mode']) && $settings['debug_mode']['value'] == 'true') ? 'checked' : ''; ?>>
                                                 <label class="form-check-label" for="debug_mode">Enable debug mode</label>
                                             </div>
                                             <div class="form-text">Shows detailed error messages and logs. Use only in development.</div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label for="session_timeout" class="form-label">Session Timeout (minutes)</label>
-                                            <input type="number" class="form-control" id="session_timeout" name="session_timeout" 
+                                            <input type="number" class="form-control" id="session_timeout" name="session_timeout"
                                                 value="<?php echo isset($settings['session_timeout']) ? htmlspecialchars($settings['session_timeout']['value']) : '30'; ?>">
                                             <div class="form-text">Time in minutes before an inactive session expires</div>
                                         </div>
-                                        
+
                                         <div class="mb-3">
                                             <label for="maintenance_mode" class="form-label">Maintenance Mode</label>
                                             <div class="form-check form-switch">
-                                                <input class="form-check-input" type="checkbox" id="maintenance_mode" name="maintenance_mode" value="true" 
+                                                <input class="form-check-input" type="checkbox" id="maintenance_mode" name="maintenance_mode" value="true"
                                                     <?php echo (isset($settings['maintenance_mode']) && $settings['maintenance_mode']['value'] == 'true') ? 'checked' : ''; ?>>
                                                 <label class="form-check-label" for="maintenance_mode">Enable maintenance mode</label>
                                             </div>
                                             <div class="form-text">When enabled, only administrators can access the system</div>
                                         </div>
-                                        
+
                                         <button type="submit" name="update_settings" class="btn btn-primary">
                                             <i class="bi bi-save me-2"></i>Save Settings
                                         </button>
                                     </form>
                                 </div>
-                                
+
                                 <!-- Backup & Restore -->
                                 <div class="tab-pane fade" id="backup" role="tabpanel" aria-labelledby="backup-tab">
                                     <h4 class="mb-4">Backup & Restore</h4>
-                                    
+
                                     <div class="card mb-4">
                                         <div class="card-header">
                                             <h5 class="mb-0">Database Backup</h5>
@@ -472,7 +520,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                             </a>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="card">
                                         <div class="card-header">
                                             <h5 class="mb-0">Restore Database</h5>
@@ -493,11 +541,11 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <!-- Custom Settings -->
                                 <div class="tab-pane fade" id="custom" role="tabpanel" aria-labelledby="custom-tab">
                                     <h4 class="mb-4">Custom Settings</h4>
-                                    
+
                                     <div class="card mb-4">
                                         <div class="card-header">
                                             <h5 class="mb-0">Add New Setting</h5>
@@ -508,27 +556,27 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                                     <label for="new_setting_name" class="form-label">Setting Name</label>
                                                     <input type="text" class="form-control" id="new_setting_name" name="new_setting_name" required>
                                                     <div class="form-text">Use lowercase letters and underscores (e.g
-                                                    <div class="form-text">Use lowercase letters and underscores (e.g., system_timeout, logo_path)</div>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="new_setting_value" class="form-label">Setting Value</label>
-                                                    <input type="text" class="form-control" id="new_setting_value" name="new_setting_value" required>
-                                                </div>
-                                                
-                                                <div class="mb-3">
-                                                    <label for="new_setting_description" class="form-label">Description</label>
-                                                    <textarea class="form-control" id="new_setting_description" name="new_setting_description" rows="2"></textarea>
-                                                    <div class="form-text">Brief explanation of what this setting controls</div>
-                                                </div>
-                                                
-                                                <button type="submit" name="add_setting" class="btn btn-success">
-                                                    <i class="bi bi-plus-circle me-2"></i>Add Setting
-                                                </button>
+                                                        <div class="form-text">Use lowercase letters and underscores (e.g., system_timeout, logo_path)</div>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label for="new_setting_value" class="form-label">Setting Value</label>
+                                                        <input type="text" class="form-control" id="new_setting_value" name="new_setting_value" required>
+                                                    </div>
+
+                                                    <div class="mb-3">
+                                                        <label for="new_setting_description" class="form-label">Description</label>
+                                                        <textarea class="form-control" id="new_setting_description" name="new_setting_description" rows="2"></textarea>
+                                                        <div class="form-text">Brief explanation of what this setting controls</div>
+                                                    </div>
+
+                                                    <button type="submit" name="add_setting" class="btn btn-success">
+                                                        <i class="bi bi-plus-circle me-2"></i>Add Setting
+                                                    </button>
                                             </form>
                                         </div>
                                     </div>
-                                    
+
                                     <div class="card">
                                         <div class="card-header">
                                             <h5 class="mb-0">Custom Settings List</h5>
@@ -545,37 +593,45 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        <?php 
-                                                        $custom_settings = array_filter($settings, function($key) {
+                                                        <?php
+                                                        $custom_settings = array_filter($settings, function ($key) {
                                                             $default_settings = [
-                                                                'company_name', 'system_email', 'items_per_page', 
-                                                                'enable_email_notifications', 'maintenance_reminder_days',
-                                                                'default_currency', 'date_format', 'enable_user_registration',
-                                                                'system_theme', 'debug_mode', 'session_timeout', 'maintenance_mode'
+                                                                'company_name',
+                                                                'system_email',
+                                                                'items_per_page',
+                                                                'enable_email_notifications',
+                                                                'maintenance_reminder_days',
+                                                                'default_currency',
+                                                                'date_format',
+                                                                'enable_user_registration',
+                                                                'system_theme',
+                                                                'debug_mode',
+                                                                'session_timeout',
+                                                                'maintenance_mode'
                                                             ];
                                                             return !in_array($key, $default_settings);
                                                         }, ARRAY_FILTER_USE_KEY);
-                                                        
+
                                                         if (count($custom_settings) > 0):
                                                             foreach ($custom_settings as $name => $setting):
                                                         ?>
-                                                            <tr>
-                                                                <td><?php echo htmlspecialchars($name); ?></td>
-                                                                <td><?php echo htmlspecialchars($setting['value']); ?></td>
-                                                                <td><?php echo htmlspecialchars($setting['description']); ?></td>
-                                                                <td>
-                                                                    <a href="edit_setting.php?name=<?php echo urlencode($name); ?>" class="btn btn-sm btn-outline-primary">
-                                                                        <i class="bi bi-pencil"></i>
-                                                                    </a>
-                                                                    <a href="settings.php?delete=<?php echo urlencode($name); ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this setting?')">
-                                                                        <i class="bi bi-trash"></i>
-                                                                    </a>
-                                                                </td>
-                                                            </tr>
-                                                        <?php 
+                                                                <tr>
+                                                                    <td><?php echo htmlspecialchars($name); ?></td>
+                                                                    <td><?php echo htmlspecialchars($setting['value']); ?></td>
+                                                                    <td><?php echo htmlspecialchars($setting['description']); ?></td>
+                                                                    <td>
+                                                                        <a href="edit_setting.php?name=<?php echo urlencode($name); ?>" class="btn btn-sm btn-outline-primary">
+                                                                            <i class="bi bi-pencil"></i>
+                                                                        </a>
+                                                                        <a href="settings.php?delete=<?php echo urlencode($name); ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this setting?')">
+                                                                            <i class="bi bi-trash"></i>
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            <?php
                                                             endforeach;
                                                         else:
-                                                        ?>
+                                                            ?>
                                                             <tr>
                                                                 <td colspan="4" class="text-center">No custom settings found. Add one using the form above.</td>
                                                             </tr>
@@ -605,9 +661,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById('sidebar');
             const toggleBtn = document.getElementById('toggleSidebar');
-            
-            if (window.innerWidth < 992 && 
-                !sidebar.contains(event.target) && 
+
+            if (window.innerWidth < 992 &&
+                !sidebar.contains(event.target) &&
                 !toggleBtn.contains(event.target) &&
                 sidebar.classList.contains('active')) {
                 sidebar.classList.remove('active');
@@ -628,4 +684,5 @@ if (isset($_GET['action']) && $_GET['action'] == 'backup') {
         });
     </script>
 </body>
+
 </html>
