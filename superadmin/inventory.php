@@ -9,149 +9,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
 // Handle asset operations (add, edit, delete)
 $successMsg = $errorMsg = "";
 
-// Add new category
-if (isset($_POST['add_category'])) {
-    $category_name = mysqli_real_escape_string($conn, $_POST['category_name']);
-
-    // Check if category already exists
-    $check_query = "SELECT * FROM asset_categories WHERE category_name = '$category_name'";
-    $check_result = mysqli_query($conn, $check_query);
-
-    if (mysqli_num_rows($check_result) > 0) {
-        $errorMsg = "Category already exists!";
-    } else {
-        $query = "INSERT INTO asset_categories (category_name) VALUES ('$category_name')";
-
-        if (mysqli_query($conn, $query)) {
-            $successMsg = "Category added successfully!";
-        } else {
-            $errorMsg = "Error: " . mysqli_error($conn);
-        }
-    }
-}
-
-// Delete category
-if (isset($_GET['delete_category'])) {
-    $category_id = mysqli_real_escape_string($conn, $_GET['delete_category']);
-
-    // Check if category is in use
-    $check_query = "SELECT COUNT(*) as count FROM assets WHERE category = (SELECT category_name FROM asset_categories WHERE id = '$category_id')";
-    $check_result = mysqli_query($conn, $check_query);
-    $check_data = mysqli_fetch_assoc($check_result);
-
-    if ($check_data['count'] > 0) {
-        $errorMsg = "Cannot delete category that is in use by assets!";
-    } else {
-        $query = "DELETE FROM asset_categories WHERE id = '$category_id'";
-
-        if (mysqli_query($conn, $query)) {
-            $successMsg = "Category deleted successfully!";
-        } else {
-            $errorMsg = "Error: " . mysqli_error($conn);
-        }
-    }
-}
-
-// Add new asset
-if (isset($_POST['add_asset'])) {
-    $asset_name = mysqli_real_escape_string($conn, $_POST['asset_name']);
-    $asset_category = mysqli_real_escape_string($conn, $_POST['asset_category']);
-    $asset_status = mysqli_real_escape_string($conn, $_POST['asset_status']);
-    $asset_description = mysqli_real_escape_string($conn, $_POST['asset_description']);
-    $date_acquired = mysqli_real_escape_string($conn, $_POST['date_acquired']);
-    $asset_value = mysqli_real_escape_string($conn, $_POST['asset_value']);
-    $quantity = mysqli_real_escape_string($conn, $_POST['quantity']);
-    $unit = mysqli_real_escape_string($conn, $_POST['unit']);
-    $location = mysqli_real_escape_string($conn, $_POST['location']);
-
-    $query = "INSERT INTO assets (asset_name, category, status, description, date_acquired, asset_value, quantity, unit, location) 
-              VALUES ('$asset_name', '$asset_category', '$asset_status', '$asset_description', '$date_acquired', '$asset_value', '$quantity', '$unit', '$location')";
-
-    if (mysqli_query($conn, $query)) {
-        $successMsg = "Asset added successfully!";
-    } else {
-        $errorMsg = "Error: " . mysqli_error($conn);
-    }
-}
-
-// Update asset
-if (isset($_POST['update_asset'])) {
-    $asset_id = mysqli_real_escape_string($conn, $_POST['asset_id']);
-    $asset_name = mysqli_real_escape_string($conn, $_POST['asset_name']);
-    $asset_category = mysqli_real_escape_string($conn, $_POST['asset_category']);
-    $asset_status = mysqli_real_escape_string($conn, $_POST['asset_status']);
-    $asset_description = mysqli_real_escape_string($conn, $_POST['asset_description']);
-    $date_acquired = mysqli_real_escape_string($conn, $_POST['date_acquired']);
-    $asset_value = mysqli_real_escape_string($conn, $_POST['asset_value']);
-    $quantity = mysqli_real_escape_string($conn, $_POST['quantity']);
-    $unit = mysqli_real_escape_string($conn, $_POST['unit']);
-    $location = mysqli_real_escape_string($conn, $_POST['location']);
-
-    $query = "UPDATE assets SET 
-              asset_name = '$asset_name', 
-              category = '$asset_category', 
-              status = '$asset_status', 
-              description = '$asset_description', 
-              date_acquired = '$date_acquired',
-              asset_value = '$asset_value',
-              quantity = '$quantity',
-              unit = '$unit',
-              location = '$location'
-              WHERE id = '$asset_id'";
-
-    if (mysqli_query($conn, $query)) {
-        $successMsg = "Asset updated successfully!";
-    } else {
-        $errorMsg = "Error: " . mysqli_error($conn);
-    }
-}
-
-// Delete asset
-if (isset($_GET['delete_id'])) {
-    $asset_id = mysqli_real_escape_string($conn, $_GET['delete_id']);
-
-    $query = "DELETE FROM assets WHERE id = '$asset_id'";
-
-    if (mysqli_query($conn, $query)) {
-        $successMsg = "Asset deleted successfully!";
-    } else {
-        $errorMsg = "Error: " . mysqli_error($conn);
-    }
-}
-
-// Fetch all assets
-$query = "SELECT * FROM assets ORDER BY id DESC";
-$result = mysqli_query($conn, $query);
-$assets = mysqli_fetch_all($result, MYSQLI_ASSOC);
-
-// Fetch asset categories for dropdown
-$query = "SELECT * FROM asset_categories ORDER BY category_name";
-$categories_result = mysqli_query($conn, $query);
-
-// If the asset_categories table doesn't exist yet, create it and fetch from assets table
-if (!$categories_result) {
-    // Create the asset_categories table
-    $create_table_query = "CREATE TABLE IF NOT EXISTS `asset_categories` (
-        `id` int(11) NOT NULL AUTO_INCREMENT,
-        `category_name` varchar(100) NOT NULL,
-        `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (`id`),
-        UNIQUE KEY `category_name` (`category_name`)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
-
-    mysqli_query($conn, $create_table_query);
-
-    // Import existing categories from assets table
-    $import_query = "INSERT IGNORE INTO asset_categories (category_name) 
-                    SELECT DISTINCT category FROM assets WHERE category != ''";
-    mysqli_query($conn, $import_query);
-
-    // Fetch categories again
-    $query = "SELECT * FROM asset_categories ORDER BY category_name";
-    $categories_result = mysqli_query($conn, $query);
-}
-
-$categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
+include "includes/inventory_engine.php";
 ?>
 
 <!DOCTYPE html>
@@ -170,68 +28,12 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-
-    <style>
-        .asset-status-available {
-            background-color: #d1e7dd;
-            color: #0f5132;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .asset-status-in-use {
-            background-color: #cff4fc;
-            color: #055160;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .asset-status-maintenance {
-            background-color: #fff3cd;
-            color: #664d03;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .asset-status-retired {
-            background-color: #f8d7da;
-            color: #842029;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .nav-tabs .nav-link {
-            color: #495057;
-        }
-
-        .nav-tabs .nav-link.active {
-            font-weight: bold;
-            color: #0d6efd;
-        }
-    </style>
 </head>
 
 <body>
     <div class="wrapper">
         <!-- Sidebar -->
-        <div class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h4>Inventory Management</h4>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a href="super_admin_dashboard.php"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-                <li><a href="user_management.php"><i class="bi bi-people"></i> User Management</a></li>
-                <li class="active"><a href="inventory.php"><i class="bi bi-box-seam"></i> Inventory</a></li>
-                <li><a href="#"><i class="bi bi-cart3"></i> Orders</a></li>
-                <li><a href="reports.php"><i class="bi bi-graph-up"></i> Reports</a></li>
-                <li><a href="settings.php"><i class="bi bi-gear"></i> Settings</a></li>
-                <li><a href="../logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
-            </ul>
-        </div>
+        <?php include "includes/sidebar.php"; ?>
 
         <!-- Main Content -->
         <div class="main-content">
@@ -368,7 +170,6 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                 <table id="assetsTable" class="table table-striped table-hover">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
                                             <th>Asset Name</th>
                                             <th>Category</th>
                                             <th>Quantity</th>
@@ -384,7 +185,6 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                     <tbody>
                                         <?php foreach ($assets as $asset): ?>
                                             <tr>
-                                                <td><?php echo $asset['id']; ?></td>
                                                 <td><?php echo $asset['asset_name']; ?></td>
                                                 <td><?php echo $asset['category']; ?></td>
                                                 <td><?php echo isset($asset['quantity']) ? $asset['quantity'] : ''; ?></td>
@@ -678,67 +478,6 @@ $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.4/js/dataTables.bootstrap5.min.js"></script>
-
-    <script>
-        $(document).ready(function() {
-            // Initialize DataTable
-            $('#assetsTable').DataTable({
-                order: [
-                    [0, 'desc']
-                ]
-            });
-
-            // Handle edit button clicks
-            $('.edit-btn').click(function() {
-                const id = $(this).data('id');
-                const name = $(this).data('name');
-                const category = $(this).data('category');
-                const status = $(this).data('status');
-                const description = $(this).data('description');
-                const acquired = $(this).data('acquired');
-                const value = $(this).data('value');
-                const quantity = $(this).data('quantity');
-                const unit = $(this).data('unit');
-                const location = $(this).data('location');
-
-                $('#edit_asset_id').val(id);
-                $('#edit_asset_name').val(name);
-                $('#edit_asset_category').val(category);
-                $('#edit_asset_status').val(status);
-                $('#edit_asset_description').val(description);
-                $('#edit_date_acquired').val(acquired);
-                $('#edit_asset_value').val(value);
-                $('#edit_quantity').val(quantity || 1);
-                $('#edit_unit').val(unit);
-                $('#edit_location').val(location);
-            });
-
-
-            // Auto dismiss alerts after 5 seconds
-            setTimeout(function() {
-                $('.alert').alert('close');
-            }, 5000);
-
-            // Toggle sidebar on mobile
-            $('#sidebarToggle').on('click', function() {
-                $('#sidebar').toggleClass('collapsed');
-                $('.main-content').toggleClass('expanded');
-            });
-
-            // Initialize tooltips
-            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            tooltipTriggerList.map(function(tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-        });
-    </script>
+    <?php include "includes/inventory_script.php";?>
 </body>
-
 </html>

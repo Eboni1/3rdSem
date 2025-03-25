@@ -8,48 +8,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
     exit;
 }
 
-// Process user activation/deactivation if requested
-if (isset($_POST['toggle_status']) && isset($_POST['user_id'])) {
-    $user_id = $_POST['user_id'];
-    $new_status = $_POST['new_status'];
-    
-    $stmt = $conn->prepare("UPDATE users SET status = ? WHERE id = ?");
-    $stmt->bind_param("si", $new_status, $user_id);
-    $stmt->execute();
-    $stmt->close();
-    
-    // Log the activity
-    $action = "Changed user ID $user_id status to $new_status";
-    log_activity($conn, $action, "User Management");
-    
-    // Redirect to refresh the page
-    header("Location: user_management.php");
-    exit;
-}
-// Fetch all users
-$stmt = $conn->prepare("SELECT id, username, email, role, status, created_at FROM users ORDER BY created_at DESC");
-$stmt->execute();
-$result = $stmt->get_result();
-$users = $result->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
-
-// Count total users
-$stmt = $conn->prepare("SELECT COUNT(*) as total FROM users");
-$stmt->execute();
-$total_users = $stmt->get_result()->fetch_assoc()['total'];
-$stmt->close();
-
-// Count active users
-$stmt = $conn->prepare("SELECT COUNT(*) as active FROM users WHERE status = 'active'");
-$stmt->execute();
-$active_users = $stmt->get_result()->fetch_assoc()['active'];
-$stmt->close();
-
-// Count inactive users
-$stmt = $conn->prepare("SELECT COUNT(*) as inactive FROM users WHERE status = 'inactive'");
-$stmt->execute();
-$inactive_users = $stmt->get_result()->fetch_assoc()['inactive'];
-$stmt->close();
+include "includes/user_management_engine.php";
 ?>
 
 <!DOCTYPE html>
@@ -64,20 +23,7 @@ $stmt->close();
 </head>
 <body>
     <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h4>Inventory Management</h4>
-        </div>
-        <ul class="sidebar-menu">
-            <li><a href="super_admin_dashboard.php"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-            <li class="active"><a href="user_management.php"><i class="bi bi-people"></i> User Management</a></li>
-            <li><a href="inventory.php"><i class="bi bi-box-seam"></i> Inventory</a></li>
-            <li><a href="#"><i class="bi bi-cart3"></i> Orders</a></li>
-            <li><a href="reports.php"><i class="bi bi-graph-up"></i> Reports</a></li>
-            <li><a href="settings.php"><i class="bi bi-gear"></i> Settings</a></li>
-            <li><a href="../logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
-        </ul>
-    </div>
+    <?php include "includes/sidebar.php"; ?>
 
     <!-- Main Content -->
     <div class="main-content">
@@ -254,32 +200,6 @@ $stmt->close();
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Toggle sidebar on mobile
-        document.getElementById('toggleSidebar').addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('active');
-        });
-
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('toggleSidebar');
-            
-            if (window.innerWidth < 992 && 
-                !sidebar.contains(event.target) && 
-                !toggleBtn.contains(event.target) &&
-                sidebar.classList.contains('active')) {
-                sidebar.classList.remove('active');
-            }
-        });
-
-        // Responsive adjustments
-        window.addEventListener('resize', function() {
-            if (window.innerWidth >= 992) {
-                document.getElementById('sidebar').classList.remove('active');
-            }
-        });
-    </script>
+    <?php include "includes/user_management_script.php";?>
 </body>
 </html>

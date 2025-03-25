@@ -6,50 +6,7 @@ if (!isset($_SESSION["user_id"]) || $_SESSION["role"] !== "super_admin") {
     exit;
 }
 
-// Get total users count
-$users_query = "SELECT COUNT(*) as total_users FROM users";
-$users_result = mysqli_query($conn, $users_query);
-$users_data = mysqli_fetch_assoc($users_result);
-$total_users = $users_data['total_users'];
-
-// Get inventory statistics
-$total_items_query = "SELECT COUNT(*) as total FROM assets";
-$total_items_result = mysqli_query($conn, $total_items_query);
-$total_items_data = mysqli_fetch_assoc($total_items_result);
-$total_items = $total_items_data['total'];
-
-// Get available items
-$available_query = "SELECT COUNT(*) as available FROM assets WHERE status = 'Available'";
-$available_result = mysqli_query($conn, $available_query);
-$available_data = mysqli_fetch_assoc($available_result);
-$available_items = $available_data['available'];
-
-// Get items in use
-$in_use_query = "SELECT COUNT(*) as in_use FROM assets WHERE status = 'In Use'";
-$in_use_result = mysqli_query($conn, $in_use_query);
-$in_use_data = mysqli_fetch_assoc($in_use_result);
-$in_use_items = $in_use_data['in_use'];
-
-// Get maintenance items
-$maintenance_query = "SELECT COUNT(*) as maintenance FROM assets WHERE status = 'Maintenance'";
-$maintenance_result = mysqli_query($conn, $maintenance_query);
-$maintenance_data = mysqli_fetch_assoc($maintenance_result);
-$maintenance_items = $maintenance_data['maintenance'];
-
-// Get recent users
-$recent_users_query = "SELECT id, username, role, status FROM users ORDER BY id DESC LIMIT 3";
-$recent_users_result = mysqli_query($conn, $recent_users_query);
-$recent_users = mysqli_fetch_all($recent_users_result, MYSQLI_ASSOC);
-
-// Get recent assets
-$recent_assets_query = "SELECT id, asset_name, category, status, date_acquired FROM assets ORDER BY id DESC LIMIT 5";
-$recent_assets_result = mysqli_query($conn, $recent_assets_query);
-$recent_assets = mysqli_fetch_all($recent_assets_result, MYSQLI_ASSOC);
-
-// Get category statistics
-$categories_query = "SELECT category, COUNT(*) as count FROM assets GROUP BY category ORDER BY count DESC LIMIT 5";
-$categories_result = mysqli_query($conn, $categories_query);
-$categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
+include "includes/super_admin_engine.php";
 ?>
 
 <!DOCTYPE html>
@@ -60,71 +17,10 @@ $categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
     <title>Inventory Management - Super Admin</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .asset-status-available {
-            background-color: #d1e7dd;
-            color: #0f5132;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-        
-        .asset-status-in-use {
-            background-color: #cff4fc;
-            color: #055160;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-        
-        .asset-status-maintenance {
-            background-color: #fff3cd;
-            color: #664d03;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-        
-        .asset-status-retired {
-            background-color: #f8d7da;
-            color: #842029;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-        
-        .category-stat {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 8px 12px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-        }
-        
-        .category-stat:hover {
-            background-color: #e9ecef;
-        }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- Sidebar -->
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h4>Inventory Management</h4>
-        </div>
-        <ul class="sidebar-menu">
-            <li class="active"><a href="#"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
-            <li><a href="user_management.php"><i class="bi bi-people"></i> User Management</a></li>
-            <li><a href="inventory.php"><i class="bi bi-box-seam"></i> Inventory</a></li>
-            <li><a href="#"><i class="bi bi-cart3"></i> Orders</a></li>
-            <li><a href="reports.php"><i class="bi bi-graph-up"></i> Reports</a></li>
-            <!-- <li><a href="audit_trail.php"><i class="bi bi-journal-text"></i> Audit Trail</a></li> -->
-            <li><a href="settings.php"><i class="bi bi-gear"></i> Settings</a></li>
-            <li><a href="../logout.php"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
-        </ul>
-    </div>
+   <?php include "includes/sidebar.php"; ?>
 
     <!-- Main Content -->
     <div class="main-content">
@@ -205,7 +101,6 @@ $categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>ID</th>
                                             <th>Asset Name</th>
                                             <th>Category</th>
                                             <th>Status</th>
@@ -220,7 +115,6 @@ $categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
                                         <?php else: ?>
                                             <?php foreach ($recent_assets as $asset): ?>
                                                 <tr>
-                                                    <td><?php echo $asset['id']; ?></td>
                                                     <td><?php echo htmlspecialchars($asset['asset_name']); ?></td>
                                                     <td><?php echo htmlspecialchars($asset['category']); ?></td>
                                                     <td>
@@ -421,32 +315,6 @@ $categories_stats = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Toggle sidebar on mobile
-        document.getElementById('toggleSidebar').addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('active');
-        });
-
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('toggleSidebar');
-            
-            if (window.innerWidth < 992 && 
-                !sidebar.contains(event.target) && 
-                !toggleBtn.contains(event.target) &&
-                sidebar.classList.contains('active')) {
-                sidebar.classList.remove('active');
-            }
-        });
-
-        // Responsive adjustments
-        window.addEventListener('resize', function() {
-            if (window.innerWidth >= 992) {
-                document.getElementById('sidebar').classList.remove('active');
-            }
-        });
-    </script>
+    <?php include "includes/super_admin_script.php";?>
 </body>
 </html>
