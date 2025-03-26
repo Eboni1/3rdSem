@@ -39,8 +39,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $mail->isSMTP();
                 $mail->Host = 'smtp.gmail.com';
                 $mail->SMTPAuth = true;
-                $mail->Username = 'your-email@gmail.com'; // Replace with your Gmail
-                $mail->Password = 'your-app-password'; // Use Google App Password
+                $mail->Username = 'waltielappy@gmail.com'; // Replace with your Gmail
+                $mail->Password = 'gwox gjah ufkf hyla'; // Use Google App Password
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port = 587;
 
@@ -49,7 +49,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $resetLink = "$baseURL/reset_password.php?token=$token";
 
                 // Email Content
-                $mail->setFrom('your-email@gmail.com', 'Pilar Inventory System');
+                $mail->setFrom('waltielappy@gmail.com', 'Pilar Inventory System');
                 $mail->addAddress($email); // Send email to registered user
                 $mail->Subject = 'Password Reset Request';
                 $mail->Body = "Click here to reset your password: $resetLink";

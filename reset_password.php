@@ -29,7 +29,7 @@ if (isset($_GET['token'])) {
                 $stmt->execute();
 
                 // Redirect to login page
-                header("Location: login.php?reset=success");
+                header("Location: index.php?reset=success");
                 exit;
             }
         }
