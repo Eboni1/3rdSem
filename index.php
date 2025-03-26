@@ -7,57 +7,74 @@ $offices = [];
 $sql = "SELECT id, office_name FROM offices";
 $result = $conn->query($sql);
 
+// Check if the query executed successfully
+if (!$result) {
+    die("Error fetching offices: " . $conn->error);
+}
+
+// Check if offices exist
 if ($result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         $offices[] = $row; // Store offices in an array
     }
+} else {
+    echo "<script>alert('No offices found! Please ask the super admin to add offices.');</script>";
 }
 
 // Check if form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = trim($_POST["username"]);
     $password = trim($_POST["password"]);
-    $office_id = trim($_POST["office"]);
+    $selected_office_id = trim($_POST["office"]);
 
-    if (empty($username) || empty($password) || empty($office_id)) {
-        echo "Please fill in all fields.";
-        exit;
-    }
-
-    // Prepare SQL statement to prevent SQL injection
-    $stmt = $conn->prepare("SELECT id, username, password, role FROM users WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    // Check if user exists
-    if ($result->num_rows == 1) {
-        $user = $result->fetch_assoc();
-
-        // Verify password
-        if (password_verify($password, $user["password"])) {
-            $_SESSION["user_id"] = $user["id"];
-            $_SESSION["username"] = $user["username"];
-            $_SESSION["role"] = $user["role"];
-            $_SESSION["office_id"] = $office_id; // Store selected office in session
-
-            // Redirect based on role
-            if ($user["role"] === "super_admin") {
-                header("Location: superadmin/super_admin_dashboard.php");
-            } elseif ($user["role"] === "admin") {
-                header("Location: admin/dashboard.php");
-            } else {
-                header("Location: user_dashboard.php");
-            }
-            exit;
-        } else {
-            echo "Invalid username or password.";
-        }
+    if (empty($username) || empty($password) || empty($selected_office_id)) {
+        echo "<script>alert('Please fill in all fields.');</script>";
     } else {
-        echo "Invalid username or password.";
-    }
+        // Prepare SQL statement to prevent SQL injection
+        $stmt = $conn->prepare("
+            SELECT id, username, password, role, office_id 
+            FROM users 
+            WHERE username = ? 
+              AND office_id = ?
+        ");
+        $stmt->bind_param("si", $username, $selected_office_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-    $stmt->close();
+        // Check if user exists in the selected office
+        if ($result->num_rows == 1) {
+            $user = $result->fetch_assoc();
+
+            // Verify password
+            if (password_verify($password, $user["password"])) {
+                // Store session variables
+                $_SESSION["user_id"] = $user["id"];
+                $_SESSION["username"] = $user["username"];
+                $_SESSION["role"] = $user["role"];
+                $_SESSION["office_id"] = $user["office_id"]; // Store the actual office ID
+
+                // Redirect based on role & office
+                switch ($user["role"]) {
+                    case "super_admin":
+                        header("Location: superadmin/super_admin_dashboard.php?office=" . $user["office_id"]);
+                        break;
+                    case "admin":
+                        header("Location: admin/admin_dashboard.php?office=" . $user["office_id"]);
+                        break;
+                    default:
+                        header("Location: user_dashboard.php?office=" . $user["office_id"]);
+                        break;
+                }
+                exit;
+            } else {
+                echo "<script>alert('Invalid username or password.');</script>";
+            }
+        } else {
+            echo "<script>alert('Invalid username, password, or office selection.');</script>";
+        }
+
+        $stmt->close();
+    }
 }
 
 $conn->close();
@@ -75,7 +92,6 @@ $conn->close();
 </head>
 <body class="bg-light d-flex flex-column justify-content-center align-items-center vh-100">
 
-
     <!-- Card Container for Login Form -->
     <div class="card shadow-lg p-4 rounded" style="max-width: 400px; width: 100%;">
         <div class="card-body text-center">
@@ -89,23 +105,29 @@ $conn->close();
                 <!-- Username Field -->
                 <div class="mb-3 text-start">
                     <label for="username" class="fw-bold">Username</label>
-                    <input type="text" name="username" id="username" class="form-control" autocomplete="off" placeholder="Enter your username">
+                    <input type="text" name="username" id="username" class="form-control" autocomplete="off" placeholder="Enter your username" required>
                 </div>
 
                 <!-- Password Field -->
                 <div class="mb-3 text-start">
                     <label for="password" class="fw-bold">Password</label>
-                    <input type="password" name="password" id="password" class="form-control" autocomplete="new-password" placeholder="Enter your password">
+                    <input type="password" name="password" id="password" class="form-control" autocomplete="new-password" placeholder="Enter your password" required>
                 </div>
 
                 <!-- Office Dropdown -->
                 <div class="mb-3 text-start">
                     <label for="office" class="fw-bold">Select Office</label>
-                    <select name="office" id="office" class="form-select">
+                    <select name="office" id="office" class="form-select" required>
                         <option value="" selected disabled>Select Office</option>
-                        <?php foreach ($offices as $office): ?>
-                            <option value="<?= $office['id'] ?>"><?= htmlspecialchars($office['office_name']) ?></option>
-                        <?php endforeach; ?>
+                        <?php if (!empty($offices)): ?>
+                            <?php foreach ($offices as $office): ?>
+                                <option value="<?= htmlspecialchars($office['id']) ?>">
+                                    <?= htmlspecialchars($office['office_name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <option value="" disabled>No offices available</option>
+                        <?php endif; ?>
                     </select>
                 </div>
 
@@ -122,4 +144,3 @@ $conn->close();
 
 </body>
 </html>
-
