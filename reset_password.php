@@ -19,6 +19,8 @@ if (isset($_GET['token'])) {
                 $error = "Please enter your new password.";
             } elseif ($new_password !== $confirm_password) {
                 $error = "Passwords do not match.";
+            } elseif (!preg_match("/^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/", $new_password)) {
+                $error = "Password must be at least 8 characters long, contain 1 uppercase letter, 1 number, and 1 special character.";
             } else {
                 // Hash the new password for security
                 $hashed_password = password_hash($new_password, PASSWORD_BCRYPT);
@@ -48,7 +50,8 @@ if (isset($_GET['token'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <link rel="stylesheet" href="style.css">    <title>Reset Password</title>
+    <link rel="stylesheet" href="style.css">
+    <title>Reset Password</title>
 </head>
 <body class="bg-light d-flex flex-column justify-content-center align-items-center vh-100">
 
@@ -61,20 +64,89 @@ if (isset($_GET['token'])) {
             <?php endif; ?>
 
             <form action="" method="post">
+                <!-- New Password Field with Eye Icon -->
                 <div class="mb-3 text-start">
                     <label for="password" class="fw-bold">New Password</label>
-                    <input type="password" name="password" id="password" class="form-control" required placeholder="Enter new password">
+                    <div class="input-group">
+                        <input type="password" name="password" id="password" class="form-control" required placeholder="Enter new password">
+                        <span class="input-group-text bg-white border border-start-0 p-0" id="togglePassword" style="cursor: pointer; width: 40px; display: flex; justify-content: center; align-items: center;">
+                            <i class="bi bi-eye" id="eyeIcon"></i>
+                        </span>
+                    </div>
+                    <small class="text-muted">Must be 8+ chars, 1 uppercase, 1 number, 1 special character.</small>
+                    <div id="passwordError" class="text-danger small"></div>
                 </div>
 
+                <!-- Confirm Password Field -->
                 <div class="mb-3 text-start">
                     <label for="confirm_password" class="fw-bold">Confirm Password</label>
                     <input type="password" name="confirm_password" id="confirm_password" class="form-control" required placeholder="Confirm new password">
+                    <div id="confirmPasswordError" class="text-danger small"></div>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100">Reset Password</button>
+                <button type="submit" class="btn btn-primary w-100" id="submitBtn" disabled>Reset Password</button>
             </form>
         </div>
     </div>
+
+    <!-- Bootstrap Icons (Required for Eye Icon) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
+    <!-- JavaScript for Password Validation & Toggle -->
+    <script>
+        document.getElementById("togglePassword").addEventListener("click", function () {
+            const passwordField = document.getElementById("password");
+            const eyeIcon = document.getElementById("eyeIcon");
+
+            if (passwordField.type === "password") {
+                passwordField.type = "text";
+                eyeIcon.classList.remove("bi-eye");
+                eyeIcon.classList.add("bi-eye-slash");
+            } else {
+                passwordField.type = "password";
+                eyeIcon.classList.remove("bi-eye-slash");
+                eyeIcon.classList.add("bi-eye");
+            }
+        });
+
+        // Password Validation
+        document.getElementById("password").addEventListener("input", function () {
+            const password = this.value;
+            const errorDiv = document.getElementById("passwordError");
+            const submitBtn = document.getElementById("submitBtn");
+            const confirmPasswordField = document.getElementById("confirm_password");
+
+            const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+            if (!passwordRegex.test(password)) {
+                errorDiv.textContent = "Invalid password format.";
+                submitBtn.disabled = true;
+            } else {
+                errorDiv.textContent = "";
+                if (confirmPasswordField.value === password) {
+                    submitBtn.disabled = false;
+                }
+            }
+        });
+
+        // Confirm Password Validation
+        document.getElementById("confirm_password").addEventListener("input", function () {
+            const password = document.getElementById("password").value;
+            const confirmPassword = this.value;
+            const errorDiv = document.getElementById("confirmPasswordError");
+            const submitBtn = document.getElementById("submitBtn");
+
+            if (confirmPassword !== password) {
+                errorDiv.textContent = "Passwords do not match.";
+                submitBtn.disabled = true;
+            } else {
+                errorDiv.textContent = "";
+                if (document.getElementById("passwordError").textContent === "") {
+                    submitBtn.disabled = false;
+                }
+            }
+        });
+    </script>
 
 </body>
 </html>

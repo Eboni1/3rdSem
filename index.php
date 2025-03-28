@@ -82,14 +82,17 @@ $conn->close();
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
     <link rel="stylesheet" href="style.css">
     <title>Login - Pilar Inventory Management System</title>
 </head>
+
 <body class="bg-light d-flex flex-column justify-content-center align-items-center vh-100">
 
     <!-- Card Container for Login Form -->
@@ -110,9 +113,14 @@ $conn->close();
 
                 <!-- Password Field -->
                 <div class="mb-3 text-start">
-                    <label for="password" class="fw-bold">Password</label>
-                    <input type="password" name="password" id="password" class="form-control" autocomplete="new-password" placeholder="Enter your password" required>
-                </div>
+    <label for="password" class="fw-bold">Password</label>
+    <div class="input-group">
+        <input type="password" name="password" id="password" class="form-control" autocomplete="new-password" placeholder="Enter your password" required>
+        <span class="input-group-text bg-white border border-start-0 p-0" id="togglePassword" style="cursor: pointer; width: 40px; display: flex; justify-content: center; align-items: center;">
+            <i class="bi bi-eye" id="eyeIcon" style="font-size: 1rem;"></i>
+        </span>
+    </div>
+</div>
 
                 <!-- Office Dropdown -->
                 <div class="mb-3 text-start">
@@ -143,4 +151,23 @@ $conn->close();
     </div>
 
 </body>
+
 </html>
+
+<!-- JavaScript to Toggle Password Visibility -->
+<script>
+    document.getElementById("togglePassword").addEventListener("click", function() {
+        const passwordField = document.getElementById("password");
+        const eyeIcon = document.getElementById("eyeIcon");
+
+        if (passwordField.type === "password") {
+            passwordField.type = "text";
+            eyeIcon.classList.remove("bi-eye");
+            eyeIcon.classList.add("bi-eye-slash");
+        } else {
+            passwordField.type = "password";
+            eyeIcon.classList.remove("bi-eye-slash");
+            eyeIcon.classList.add("bi-eye");
+        }
+    });
+</script>

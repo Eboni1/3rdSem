@@ -142,4 +142,11 @@ if (!$categories_result) {
 }
 
 $categories = mysqli_fetch_all($categories_result, MYSQLI_ASSOC);
+
+$query = "SELECT assets.*, offices.office_name 
+          FROM assets 
+          LEFT JOIN offices ON assets.office_id = offices.id";
+$result = mysqli_query($conn, $query);
+$assets = mysqli_fetch_all($result, MYSQLI_ASSOC);
+
 ?>
