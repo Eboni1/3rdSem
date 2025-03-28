@@ -24,4 +24,12 @@
             document.getElementById('sidebar').classList.remove('active');
         }
     });
+
+    document.querySelectorAll('.view-office-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                document.getElementById('modalOfficeName').innerText = this.getAttribute('data-office-name');
+                document.getElementById('modalAdminName').innerText = this.getAttribute('data-admin-name') || 'No Admin';
+                document.getElementById('modalTotalAssets').innerText = this.getAttribute('data-total-assets') || '0';
+            });
+        });
 </script>

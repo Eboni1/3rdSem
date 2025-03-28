@@ -48,49 +48,85 @@ include "includes/super_admin_engine.php";
             </div>
         </div>
 
-        <!-- Dashboard Content -->
-        <div class="container-fluid px-0">
-            <div class="row mb-4">
-                <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
-                    <div class="dashboard-card text-center">
-                        <div class="card-icon">
-                            <i class="bi bi-people"></i>
-                        </div>
-                        <div class="card-value"><?php echo $total_users; ?></div>
-                        <div class="card-label">TOTAL USERS</div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
-                    <div class="dashboard-card text-center">
-                        <div class="card-icon">
-                            <i class="bi bi-box-seam"></i>
-                        </div>
-                        <div class="card-value"><?php echo $total_items; ?></div>
-                        <div class="card-label">INVENTORY ITEMS</div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6 mb-3 mb-md-0">
-                    <div class="dashboard-card text-center">
-                        <div class="card-icon">
-                            <i class="bi bi-check-circle"></i>
-                        </div>
-                        <div class="card-value"><?php echo $available_items; ?></div>
-                        <div class="card-label">AVAILABLE ITEMS</div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="dashboard-card text-center">
-                        <div class="card-icon">
-                            <i class="bi bi-tools"></i>
-                        </div>
-                        <div class="card-value"><?php echo $maintenance_items; ?></div>
-                        <div class="card-label">MAINTENANCE ITEMS</div>
-                    </div>
+        <!-- Dashboard Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <i class="bi bi-people-fill icon-lg"></i>
+                    <h5><?php echo $total_users; ?></h5>
+                    <p>Total Users</p>
                 </div>
             </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <i class="bi bi-building icon-lg"></i>
+                    <h5><?php echo $total_offices; ?></h5>
+                    <p>Total Offices</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <i class="bi bi-box-seam icon-lg"></i>
+                    <h5><?php echo $total_assets; ?></h5>
+                    <p>Total Assets</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="dashboard-card text-center">
+                    <i class="bi bi-clipboard-check icon-lg"></i>
+                    <h5><?php echo $available_assets; ?></h5>
+                    <p>Available Assets</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offices Section -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="bi bi-buildings me-2"></i>Offices</h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addOfficeModal">
+                    <i class="bi bi-plus-lg"></i> Add Office
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Office Name</th>
+                                <th>Admin</th>
+                                <th>Total Assets</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($offices as $office): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($office['office_name']); ?></td>
+                                    <td><?php echo $office['admin_name'] ? htmlspecialchars($office['admin_name']) : '<span class="text-muted">No Admin</span>'; ?></td>
+                                    <td><?php echo $office['total_assets']; ?></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary view-office-btn"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#viewOfficeModal"
+                                                data-office-id="<?php echo $office['id']; ?>"
+                                                data-office-name="<?php echo htmlspecialchars($office['office_name']); ?>">
+                                            <i class="bi bi-eye"></i> View
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Office View Modal -->
+        <?php include "includes/office_view_modal.php"; ?>
 
             <div class="row">
-                <div class="col-lg-8 mb-4">
+                <div class="col-lg-8 mb-4 mt-4">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Recent Inventory Items</h5>
@@ -150,7 +186,7 @@ include "includes/super_admin_engine.php";
                     </div>
                 </div>
 
-                <div class="col-lg-4">
+                <div class="col-lg-4 mt-4">
                     <div class="card mb-4">
                         <div class="card-header">
                             <h5 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Inventory by Category</h5>
