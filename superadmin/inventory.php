@@ -51,12 +51,25 @@ $result = mysqli_query($conn, $query);
 
                     <div class="col-md-4">
                         <div class="card shadow-lg text-center p-3 mb-4">
-                            <i class="fas fa-building fa-3x text-primary mb-3"></i>
-                            <h4 class="card-title"><?php echo $office['office_name']; ?></h4>
+                            <!-- Fetch icon from database -->
+                            <?php $iconClass = !empty($office['icon']) ? $office['icon'] : 'fa-landmark'; ?>
+
+                            <div class="position-relative d-inline-block">
+                                <i id="office-icon-<?php echo $office['id']; ?>"
+                                    class="fas <?php echo htmlspecialchars($iconClass); ?> fa-3x text-primary mb-3"></i>
+                                <button class="btn btn-sm btn-outline-secondary position-absolute top-0 end-0 edit-icon-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editIconModal"
+                                    data-office-id="<?php echo $office['id']; ?>">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </div>
+
+                            <h4 class="card-title"><?php echo htmlspecialchars($office['office_name']); ?></h4>
 
                             <!-- Display Admin User -->
                             <p class="text-muted"><strong>Admin:</strong>
-                                <?php echo $admin ? $admin['fullname'] : 'No Admin Assigned'; ?>
+                                <?php echo $admin ? htmlspecialchars($admin['fullname']) : 'No Admin Assigned'; ?>
                             </p>
 
                             <!-- View Inventory Button -->
@@ -64,7 +77,7 @@ $result = mysqli_query($conn, $query);
                                 View Inventory
                             </a>
 
-                            <!-- View More Users Button (Trigger Modal) -->
+                            <!-- View More Users Button -->
                             <button class="btn btn-secondary mt-2 view-users-btn"
                                 data-bs-toggle="modal"
                                 data-bs-target="#usersModal"
@@ -72,9 +85,9 @@ $result = mysqli_query($conn, $query);
                                 data-office-name="<?php echo htmlspecialchars($office['office_name']); ?>">
                                 View More Details
                             </button>
-
                         </div>
                     </div>
+
                 <?php endwhile; ?>
             </div>
         </div>
@@ -96,6 +109,42 @@ $result = mysqli_query($conn, $query);
             </div>
         </div>
     </div>
+
+    <!-- Edit Office Icon Modal -->
+<div class="modal fade" id="editIconModal" tabindex="-1" aria-labelledby="editIconModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editIconModalLabel">Change Office Icon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editIconForm">
+                    <!-- Hidden input for office ID -->
+                    <input type="hidden" id="selectedOfficeId" name="office_id">
+
+                    <label for="iconSelect" class="form-label">Select an LGU Asset Office Icon:</label>
+                    <select class="form-select" id="iconSelect" name="icon">
+                        <option value="fa-landmark">🏛️ City/Municipal Hall</option>
+                        <option value="fa-desktop">🖥️ IT Department</option>
+                        <option value="fa-warehouse">📦 Warehouse</option>
+                        <option value="fa-tools">⚙️ Engineering Office</option>
+                        <option value="fa-hard-hat">🛠️ Public Works</option>
+                        <option value="fa-truck-moving">🚛 Transportation</option>
+                        <option value="fa-shopping-cart">🏗️ Procurement</option>
+                        <option value="fa-bolt">🔋 Energy Management</option>
+                        <option value="fa-ambulance">🏥 Health Department</option>
+                        <option value="fa-fire-extinguisher">🔥 Fire Department</option>
+                        <option value="fa-users">🏢 Barangay Halls</option>
+                    </select>
+
+                    <button type="submit" class="btn btn-primary mt-3">Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <!-- jQuery & Bootstrap Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -129,6 +178,41 @@ $result = mysqli_query($conn, $query);
                 loadUsers(officeId, officeName);
             });
         });
+
+        $(document).ready(function () {
+    // Open modal and store office ID
+    $('.edit-icon-btn').click(function () {
+        var officeId = $(this).data('office-id');
+        $('#selectedOfficeId').val(officeId);
+    });
+
+    // Handle form submission and save icon to the database
+    $('#editIconForm').submit(function (e) {
+        e.preventDefault();
+
+        var officeId = $('#selectedOfficeId').val();
+        var newIcon = $('#iconSelect').val();
+
+        // Send data to save_icon.php
+        $.ajax({
+            url: 'save_icon.php',
+            type: 'POST',
+            data: { office_id: officeId, icon: newIcon },
+            success: function (response) {
+                if (response === "success") {
+                    // Change the icon dynamically
+                    $('#office-icon-' + officeId).attr('class', 'fas ' + newIcon + ' fa-3x text-primary mb-3');
+                    $('#editIconModal').modal('hide');
+                } else {
+                    alert("Failed to update icon. Please try again.");
+                }
+            },
+            error: function () {
+                alert("Error connecting to the server.");
+            }
+        });
+    });
+});
     </script>
 
 
