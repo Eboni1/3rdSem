@@ -41,4 +41,16 @@ $stmt = $conn->prepare("SELECT COUNT(*) as inactive FROM users WHERE status = 'i
 $stmt->execute();
 $inactive_users = $stmt->get_result()->fetch_assoc()['inactive'];
 $stmt->close();
+
+// Fetch total number of offices
+$total_offices_query = "SELECT COUNT(*) as total_offices FROM offices";
+$total_offices_result = mysqli_query($conn, $total_offices_query);
+$total_offices_data = mysqli_fetch_assoc($total_offices_result);
+$total_offices = $total_offices_data['total_offices'];
+
+// Fetch all offices
+$offices_query = "SELECT id, office_name FROM offices ORDER BY office_name ASC";
+$offices_result = mysqli_query($conn, $offices_query);
+$offices = mysqli_fetch_all($offices_result, MYSQLI_ASSOC);
+
 ?>

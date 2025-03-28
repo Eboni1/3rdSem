@@ -13,6 +13,7 @@ include "includes/user_management_engine.php";
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,6 +22,7 @@ include "includes/user_management_engine.php";
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <!-- Sidebar -->
     <?php include "includes/sidebar.php"; ?>
@@ -44,7 +46,9 @@ include "includes/user_management_engine.php";
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                         <li><a class="dropdown-item" href="profile.php"><i class="bi bi-person me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
                         <li><a class="dropdown-item" href="../logout.php"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
                     </ul>
                 </div>
@@ -79,6 +83,15 @@ include "includes/user_management_engine.php";
                         </div>
                         <div class="card-value"><?php echo $inactive_users; ?></div>
                         <div class="card-label">INACTIVE USERS</div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-sm-6 mb-3 mb-md-0">
+                    <div class="dashboard-card text-center">
+                        <div class="card-icon">
+                            <i class="bi bi-building"></i>
+                        </div>
+                        <div class="card-value"><?php echo isset($total_offices) ? $total_offices : 0; ?></div>
+                        <div class="card-label">TOTAL OFFICES</div>
                     </div>
                 </div>
             </div>
@@ -124,6 +137,20 @@ include "includes/user_management_engine.php";
                                 </div>
                             </div>
 
+                            <div class="mb-3">
+                                <label for="office_id" class="form-label">Office</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-building"></i></span>
+                                    <select class="form-select" id="office_id" name="office_id" required>
+                                        <option value="" selected disabled>Select an office</option>
+                                        <?php foreach ($offices as $office): ?>
+                                            <option value="<?php echo $office['id']; ?>"><?php echo htmlspecialchars($office['office_name']); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-person-plus me-2"></i>Register User
                             </button>
@@ -141,6 +168,7 @@ include "includes/user_management_engine.php";
                                         <th>Username</th>
                                         <th>Email</th>
                                         <th>Role</th>
+                                        <th>Office</th>
                                         <th>Status</th>
                                         <th>Created</th>
                                         <th>Actions</th>
@@ -148,48 +176,60 @@ include "includes/user_management_engine.php";
                                 </thead>
                                 <tbody>
                                     <?php foreach ($users as $user): ?>
-                                    <tr>
-                                        <td><?php echo htmlspecialchars($user['username']); ?></td>
-                                        <td><?php echo htmlspecialchars($user['email']); ?></td>
-                                        <td>
-                                            <?php if ($user['role'] == 'super_admin'): ?>
-                                                <span class="badge bg-danger">Super Admin</span>
-                                            <?php elseif ($user['role'] == 'admin'): ?>
-                                                <span class="badge bg-primary">Admin</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-info">User</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($user['status'] == 'active'): ?>
-                                                <span class="badge bg-success">Active</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-warning">Inactive</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
-                                        <td>
-                                            <a href="edit_user.php?id=<?php echo $user['id']; ?>" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            
-                                            <?php if ($user['role'] != 'super_admin'): ?>
-                                                <form method="post" class="d-inline">
-                                                    <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
-                                                    <input type="hidden" name="new_status" value="<?php echo $user['status'] == 'active' ? 'inactive' : 'active'; ?>">
-                                                    <button type="submit" name="toggle_status" class="btn btn-sm <?php echo $user['status'] == 'active' ? 'btn-outline-warning' : 'btn-outline-success'; ?>">
-                                                        <i class="bi <?php echo $user['status'] == 'active' ? 'bi-person-dash' : 'bi-person-check'; ?>"></i>
-                                                    </button>
-                                                </form>
-                                            <?php endif; ?>
-                                        </td>
-                                    </tr>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($user['username']); ?></td>
+                                            <td><?php echo htmlspecialchars($user['email']); ?></td>
+                                            <td>
+                                                <?php if ($user['role'] == 'super_admin'): ?>
+                                                    <span class="badge bg-danger">Super Admin</span>
+                                                <?php elseif ($user['role'] == 'admin'): ?>
+                                                    <span class="badge bg-primary">Admin</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-info">User</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td>
+                                                <?php
+                                                $office_name = "Unassigned"; // Default value
+                                                foreach ($offices as $office) {
+                                                    if ($office['id'] == $user['office_id']) {
+                                                        $office_name = htmlspecialchars($office['office_name']);
+                                                        break;
+                                                    }
+                                                }
+                                                echo $office_name;
+                                                ?>
+                                            </td>
+                                            <td>
+                                                <?php if ($user['status'] == 'active'): ?>
+                                                    <span class="badge bg-success">Active</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning">Inactive</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
+                                            <td>
+                                                <a href="edit_user.php?id=<?php echo $user['id']; ?>" class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+
+                                                <?php if ($user['role'] != 'super_admin'): ?>
+                                                    <form method="post" class="d-inline">
+                                                        <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">
+                                                        <input type="hidden" name="new_status" value="<?php echo $user['status'] == 'active' ? 'inactive' : 'active'; ?>">
+                                                        <button type="submit" name="toggle_status" class="btn btn-sm <?php echo $user['status'] == 'active' ? 'btn-outline-warning' : 'btn-outline-success'; ?>">
+                                                            <i class="bi <?php echo $user['status'] == 'active' ? 'bi-person-dash' : 'bi-person-check'; ?>"></i>
+                                                        </button>
+                                                    </form>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
                                     <?php endforeach; ?>
-                                    
+
                                     <?php if (count($users) == 0): ?>
-                                    <tr>
-                                        <td colspan="6" class="text-center">No users found</td>
-                                    </tr>
+                                        <tr>
+                                            <td colspan="7" class="text-center">No users found</td>
+                                        </tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>
@@ -200,6 +240,7 @@ include "includes/user_management_engine.php";
         </div>
     </div>
 
-    <?php include "includes/user_management_script.php";?>
+    <?php include "includes/user_management_script.php"; ?>
 </body>
+
 </html>
